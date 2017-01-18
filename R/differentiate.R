@@ -49,13 +49,13 @@ diff_division <- function(f, g, x) {
        call("-",
         call("*", diff_expr(f, x), g),
         call("*", f, diff_expr(g, x))),
-       call("**", g, 2))
+       call("^", g, 2))
 }
 
 diff_exponentiation <- function(f, g, x) {
   # Using the chain rule to handle this generally.
   # if y = f**g then dy/dx = dy/df df/dx = g * f**(g-1) * df/dx
-  dydf <- call("*", g, call("**", f, substitute(n - 1, list(n = g))))
+  dydf <- call("*", g, call("^", f, substitute(n - 1, list(n = g))))
   dfdx <- diff_expr(f, x)
   call("*", dydf, dfdx)
 }

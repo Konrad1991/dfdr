@@ -34,19 +34,19 @@ test_that("we can differentiate variables times constants", {
   expect_equal(body(df), quote(0 * x + y * 1))
 
   f <- function(x) 1/x
-  df <- d(f, "x") # df/dx = -1/x**2
-  expect_equal(body(df), parse(text = "(0 * x - 1 * 1)/`**`(x, 2)")[[1]])
+  df <- d(f, "x") # df/dx = -1/x^2
+  expect_equal(body(df), parse(text = "(0 * x - 1 * 1)/`^`(x, 2)")[[1]])
 
 })
 
 test_that("we can differentiate exponetiation", {
-  f <- function(x) x**2
+  f <- function(x) x^2
   df <- d(f, "x")
-  expect_equal(body(df), parse(text = "2 * `**`(x, 2 - 1) * 1")[[1]])
+  expect_equal(body(df), parse(text = "2 * `^`(x, 2 - 1) * 1")[[1]])
 
-  f <- function(x) x**-2
+  f <- function(x) x^-2
   df <- d(f, "x")
-  expect_equal(body(df), parse(text = "-2 * `**`(x, -2 - 1) * 1")[[1]])
+  expect_equal(body(df), parse(text = "-2 * `^`(x, -2 - 1) * 1")[[1]])
 })
 
 test_that("we can differentiate addition and subtraction", {

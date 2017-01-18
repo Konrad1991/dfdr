@@ -12,3 +12,10 @@ output:
 
 # dfdr -- automatic differentiation of simple functions in R
 
+```{r}
+library(dfdr)
+
+f <- function(x) x^2
+df <- d(f, "x")
+body(df)
+```
