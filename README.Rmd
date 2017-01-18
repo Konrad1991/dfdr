@@ -1,0 +1,14 @@
+---
+title: "dfdr — automatic differentiation of simple functions in R"
+author: "Thomas Mailund"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+[![Travis-CI Build Status](https://travis-ci.org/mailund/dfdr.svg?branch=master)](https://travis-ci.org/mailund/dfdr)
+[![Coverage Status](https://img.shields.io/codecov/c/github/mailund/dfdr/master.svg)](https://codecov.io/github/mailund/dfdr?branch=master)
+
+
+# dfdr -- automatic differentiation of simple functions in R
+
