@@ -8,6 +8,7 @@ output:
 
 [![Travis-CI Build Status](https://travis-ci.org/mailund/dfdr.svg?branch=master)](https://travis-ci.org/mailund/dfdr)
 [![Coverage Status](https://img.shields.io/codecov/c/github/mailund/dfdr/master.svg)](https://codecov.io/github/mailund/dfdr?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/mailund/dfdr/badge.svg?branch=master)](https://coveralls.io/github/mailund/dfdr?branch=master)
 
 
 # dfdr — Automatic differentiation of simple functions in R
