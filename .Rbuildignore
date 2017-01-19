@@ -3,4 +3,5 @@
 README.Rmd
 ^\.travis\.yml$
 ^codecov\.yml$
-LICENSE
+^LICENSE$
+^README_files/.*$
