@@ -2,10 +2,11 @@
 #' Differentiate a function for a single variable.
 #'
 #' @param f  The function to differentiate.
-#' @param x  The variable that f should be differentiated with respect to.
-#' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}}
+#' @param var  The variable that f should be differentiated with respect to.
+#' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
-d <- function(f, x) {
+d <- function(f, var) {
+  x <- substitute(var)
   df <- f
   body(df) <- diff_expr(body(f), as.name(x))
   df
