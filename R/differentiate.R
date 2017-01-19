@@ -6,10 +6,25 @@
 #' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
 d <- function(f, var) {
-  x <- substitute(var)
-  df <- f
-  body(df) <- diff_expr(body(f), as.name(x))
-  df
+
+  # Primitive functions, we have to treat carefully. They don't have a body.
+  # This is just a short list of such built-in arithmetic functions, it is
+  # not exhaustive.
+  if (is.null(body(f))) {
+    if (identical(f, sin)) return(cos)
+    if (identical(f, cos)) return(function(x) -sin(x))
+    if (identical(f, exp)) return(exp)
+
+    stop("unknown primitive") # nocov
+
+  } else {
+    # for other functions we have to parse the body
+    # and differentiate it.
+    x <- substitute(var)
+    df <- f
+    body(df) <- diff_expr(body(f), as.name(x))
+    df
+  }
 }
 
 diff_expr <- function(expr, x) {
@@ -61,6 +76,19 @@ diff_exponentiation <- function(f, g, x) {
   call("*", dydf, dfdx)
 }
 
+.built_in_functions <- c("sin", "cos", "exp")
+diff_built_in_function <- function(expr, x) {
+  # chain rule with a known function to differentiate...
+  if (expr[[1]] == as.name("sin"))
+    return(call("*", call("cos", expr[[2]]), diff_expr(expr[[2]], x)))
+
+  if (expr[[1]] == as.name("cos"))
+    return(call("*", call("-", call("sin", expr[[2]])), diff_expr(expr[[2]], x)))
+
+  if (expr[[1]] == as.name("exp"))
+    return(call("*", call("exp", expr[[2]]), diff_expr(expr[[2]], x)))
+}
+
 diff_call <- function(expr, x) {
   if (expr[[1]] == as.name("+")) return(diff_addition(expr[[2]], expr[[3]], x))
   if (expr[[1]] == as.name("-")) {
@@ -72,6 +100,8 @@ diff_call <- function(expr, x) {
   if (expr[[1]] == as.name("/")) return(diff_division(expr[[2]], expr[[3]], x))
 
   if (expr[[1]] == as.name("^")) return(diff_exponentiation(expr[[2]], expr[[3]], x))
+
+  if (as.character(expr[[1]]) %in% .built_in_functions) return(diff_built_in_function(expr, x))
 
   stop(paste0("Unexpected call ", deparse(expr)))
 }

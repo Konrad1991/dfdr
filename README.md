@@ -56,6 +56,26 @@ plot_tangent(f, x, 2.5)
 
 ![](README_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
+``` r
+plot(x, sin(x), type = "l", asp = 1)
+plot_tangent(sin, x, -2)
+plot_tangent(sin, x, -1)
+plot_tangent(sin, x, 0.5)
+plot_tangent(sin, x, 2.5)
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-4-1.png)
+
+``` r
+plot(x, exp(x), type = "l")
+plot_tangent(exp, x, -2, L = 1)
+plot_tangent(exp, x, 0.0, L = 1)
+plot_tangent(exp, x, 1.5, L = 3)
+plot_tangent(exp, x, 2.5, L = 4)
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
 The body of the deriatives are not simplified right now, so they tend to be more complex than you would normally see them. When computing the derivative, `d` simply follows simple rules for computing the derivatives of expressions and handles complex expressions using the chain rule. I plan to add partial evaluation to the function later to simplify expressions.
 
 Currently, it just handles arithmetic expressions, but I will implement handling of functions in the expressions as well, soon.
