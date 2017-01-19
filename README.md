@@ -21,13 +21,40 @@ library(dfdr)
 To compute the derivative of a function, you use the function `d`. It takes two arguments, the function to compute the derivative of and the variable to compute the derivative with respect to.
 
 ``` r
-f <- function(x) x^2
+f <- function(x) 1/4*x^2
 df <- d(f, "x")
 df
 ```
 
     ## function (x) 
-    ## 2 * x^(2 - 1) * 1
+    ## (0 * 4 - 1 * 0)/4^2 * x^2 + 1/4 * (2 * x^(2 - 1) * 1)
+
+We can plot a function together with selected tangents to see how it works:
+
+``` r
+plot_tangent <- function(f, var, at, L = 1, df = NULL) {
+  if (is.null(df)) {
+    x <- substitute(var)
+    df <- d(f, x)
+  }
+  a <- df(at)
+  w <- L / sqrt(1 + a^2)
+  v <- a * w
+  x <- c(at - w, at + w)
+  y <- c(f(at) - v, f(at) + v)
+  lines(x, y, lty = "dashed", col = "darkred")
+  points(at, f(at), pch = 20)
+}
+
+x <- seq(-3, 3, length.out = 100)
+plot(x, f(x), type = "l", asp = 1)
+plot_tangent(f, x, -2)
+plot_tangent(f, x, -1)
+plot_tangent(f, x, 0.5)
+plot_tangent(f, x, 2.5)
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 The body of the deriatives are not simplified right now, so they tend to be more complex than you would normally see them. When computing the derivative, `d` simply follows simple rules for computing the derivatives of expressions and handles complex expressions using the chain rule. I plan to add partial evaluation to the function later to simplify expressions.
 
