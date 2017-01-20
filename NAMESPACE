@@ -3,3 +3,4 @@
 export(d)
 export(gradient)
 export(hessian)
+export(simplify_expr)
