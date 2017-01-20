@@ -2,10 +2,10 @@
 #' Differentiate a function for a single variable.
 #'
 #' @param f  The function to differentiate.
-#' @param var  The variable that f should be differentiated with respect to.
+#' @param x  The variable that f should be differentiated with respect to.
 #' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
-d <- function(f, var) {
+d <- function(f, x) {
 
   # Primitive functions, we have to treat carefully. They don't have a body.
   # This is just a short list of such built-in arithmetic functions, it is
@@ -20,9 +20,8 @@ d <- function(f, var) {
   } else {
     # for other functions we have to parse the body
     # and differentiate it.
-    x <- substitute(var)
     df <- f
-    body(df) <- diff_expr(body(f), as.name(x))
+    body(df) <- diff_expr(body(f), x)
     df
   }
 }

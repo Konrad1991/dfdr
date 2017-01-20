@@ -4,12 +4,12 @@
 \alias{d}
 \title{Differentiate a function for a single variable.}
 \usage{
-d(f, var)
+d(f, x)
 }
 \arguments{
 \item{f}{The function to differentiate.}
 
-\item{var}{The variable that f should be differentiated with respect to.}
+\item{x}{The variable that f should be differentiated with respect to.}
 }
 \value{
 \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
