@@ -27,10 +27,19 @@ simplify_addition <- function(f, g) {
   call("+", left, right)
 }
 
+simplify_unary_subtraction <- function(f) {
+   simplified <- simplify_expr(f)
+   if (is.numeric(simplified)) -simplified
+   else bquote(-.(simplified))
+}
+
 simplify_subtraction <- function(f, g) {
   left <- simplify_expr(f)
   right <- simplify_expr(g)
-  if (left == 0) return(bquote(-.(right)))
+  if (left == 0) {
+    if (is.numeric(right)) return(-right)
+    else return(bquote(-.(right)))
+  }
   if (right == 0) return(left)
   if (is.numeric(left) && is.numeric(right)) return(left - right)
   call("-", left, right)
@@ -76,7 +85,7 @@ simplify_built_in_function <- function(expr, x) {
 simplify_call <- function(expr) {
   if (expr[[1]] == as.name("+")) return(simplify_addition(expr[[2]], expr[[3]]))
   if (expr[[1]] == as.name("-")) {
-    if (length(expr) == 2) return(simplify_subtraction(expr[[2]], 0))
+    if (length(expr) == 2) return(simplify_unary_subtraction(expr[[2]]))
     else return(simplify_subtraction(expr[[2]], expr[[3]]))
   }
 
