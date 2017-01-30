@@ -50,3 +50,14 @@ test_that("we can do some simplifications when there are variables involved", {
 
   expect_equal(simplify_expr(quote(x ^ y)), quote(x ^ y))
 })
+
+test_that("we can handle some simple functions", {
+  expect_equal(simplify_expr(quote(sin(x))), quote(sin(x)))
+  expect_equal(simplify_expr(quote(sin(1*x))), quote(sin(x)))
+
+  expect_equal(simplify_expr(quote(sin(0*x))), 0)
+})
+
+test_that("we handle errors correctly", {
+  expect_error(simplify_expr(quote(x %in% y)))
+})
