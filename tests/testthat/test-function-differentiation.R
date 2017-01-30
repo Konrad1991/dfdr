@@ -14,13 +14,13 @@ test_that("we can differentiate known functions", {
 test_that("we can differentiate expressions with functions", {
   f <- function(x) -sin(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(-(cos(x) * 1)))
+  expect_equal(body(df), quote(-cos(x)))
 
   f <- function(x) -cos(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(-(-sin(x) * 1)))
+  expect_equal(body(df), quote(sin(x)))
 
   f <- function(x) -exp(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(-(exp(x) * 1)))
+  expect_equal(body(df), quote(-exp(x)))
 })

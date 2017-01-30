@@ -21,7 +21,7 @@ d <- function(f, x) {
     # for other functions we have to parse the body
     # and differentiate it.
     df <- f
-    body(df) <- diff_expr(body(f), x)
+    body(df) <- simplify_expr(diff_expr(body(f), x))
     df
   }
 }

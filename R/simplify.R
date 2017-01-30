@@ -30,6 +30,7 @@ simplify_addition <- function(f, g) {
 simplify_unary_subtraction <- function(f) {
    simplified <- simplify_expr(f)
    if (is.numeric(simplified)) -simplified
+   else if (is.call(simplified) && simplified[[1]] == "-") simplified[[2]]
    else bquote(-.(simplified))
 }
 
