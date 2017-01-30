@@ -78,6 +78,6 @@ plot_tangent(exp, x, 1.5, L = 3)
 plot_tangent(exp, x, 2.5, L = 4)
 ```
 
-The body of the deriatives are not simplified right now, so they tend to be more complex than you would normally see them. When computing the derivative, `d` simply follows simple rules for computing the derivatives of expressions and handles complex expressions using the chain rule. I plan to add partial evaluation to the function later to simplify expressions.
+The body of the deriatives are simplified to a certain extend, but in a depth-first approach with no rewriting of expressions, so thehy sometimes can be more complex than you would normally see them.
 
-Currently, it just handles arithmetic expressions, but I will implement handling of functions in the expressions as well, soon.
+Currently, it just handles arithmetic expressions and a few builtin functions, but I will implement handling of functions in the expressions as well, soon.

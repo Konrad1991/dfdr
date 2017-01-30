@@ -27,7 +27,7 @@ df
 ```
 
     ## function (x) 
-    ## (0 * 4 - 1 * 0)/4^2 * x^2 + 1/4 * (2 * x^(2 - 1) * 1)
+    ## 0.25 * (2 * x)
 
 We can plot a function together with selected tangents to see how it works:
 
@@ -76,6 +76,6 @@ plot_tangent(exp, x, 2.5, L = 4)
 
 ![](README_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-The body of the deriatives are not simplified right now, so they tend to be more complex than you would normally see them. When computing the derivative, `d` simply follows simple rules for computing the derivatives of expressions and handles complex expressions using the chain rule. I plan to add partial evaluation to the function later to simplify expressions.
+The body of the deriatives are simplified to a certain extend, but in a depth-first approach with no rewriting of expressions, so thehy sometimes can be more complex than you would normally see them.
 
-Currently, it just handles arithmetic expressions, but I will implement handling of functions in the expressions as well, soon.
+Currently, it just handles arithmetic expressions and a few builtin functions, but I will implement handling of functions in the expressions as well, soon.
