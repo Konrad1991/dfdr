@@ -30,7 +30,7 @@ simplify_addition <- function(f, g) {
 simplify_subtraction <- function(f, g) {
   left <- simplify_expr(f)
   right <- simplify_expr(g)
-  if (left == 0) return(right)
+  if (left == 0) return(bquote(-.(right)))
   if (right == 0) return(left)
   if (is.numeric(left) && is.numeric(right)) return(left - right)
   call("-", left, right)
