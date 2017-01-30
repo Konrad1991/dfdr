@@ -21,13 +21,13 @@ library(dfdr)
 To compute the derivative of a function, you use the function `d`. It takes two arguments, the function to compute the derivative of and the variable to compute the derivative with respect to.
 
 ``` r
-f <- function(x) 1/4*x^2
+f <- function(x) x^2 + sin(x)
 df <- d(f, "x")
 df
 ```
 
     ## function (x) 
-    ## 0.25 * (2 * x)
+    ## 2 * x + cos(x)
 
 We can plot a function together with selected tangents to see how it works:
 
@@ -46,12 +46,12 @@ plot_tangent <- function(f, var, at, L = 1, df = NULL) {
   points(at, f(at), pch = 20)
 }
 
-x <- seq(-3, 3, length.out = 100)
+x <- seq(-1.5, 0.9, length.out = 100)
 plot(x, f(x), type = "l", asp = 1)
-plot_tangent(f, x, -2)
 plot_tangent(f, x, -1)
-plot_tangent(f, x, 0.5)
-plot_tangent(f, x, 2.5)
+plot_tangent(f, x, -0.2)
+plot_tangent(f, x, 0.1)
+plot_tangent(f, x, 0.7)
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-3-1.png)
