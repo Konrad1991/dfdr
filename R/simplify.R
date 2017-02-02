@@ -73,15 +73,25 @@ simplify_exponentiation <- function(f, g) {
 }
 
 # FIXME: I don't handle named arguments here...
-.simplify_built_in_functions <- c("sin", "cos", "exp")
-simplify_built_in_function <- function(expr) {
-  call_name <- as.character(expr[[1]])
+simplify_function_call <- function(expr) {
+  function_name <- as.character(expr[[1]])
   arguments <- vector("list", length(expr) - 1)
   for (i in seq_along(arguments)) {
     arguments[i] <- list(simplify_expr(expr[[i + 1]]))
   }
-  if (all(unlist(Map(is.numeric, arguments)))) do.call(call_name, arguments)
-  else do.call("call", c(list(call_name), arguments), quote = TRUE)
+
+  # if we have simplified all expressions we might as well try calling the function
+  # if it is a function we know...
+  if (all(unlist(Map(is.numeric, arguments)))) {
+    if (function_name %in% c("sin", "cos", "exp", "log")) {
+      result <- do.call(function_name, arguments)
+      names(result) <- names(expr)
+      return(result)
+    }
+  }
+  result <- do.call("call", c(list(function_name), arguments), quote = TRUE)
+  names(result) <- names(expr)
+  result
 }
 
 simplify_call <- function(expr) {
@@ -103,9 +113,5 @@ simplify_call <- function(expr) {
     else return(call("(", subexpr))
   }
 
-  if (as.character(expr[[1]]) %in% .simplify_built_in_functions)
-    return(simplify_built_in_function(expr))
-
-  # if we get to this point, we give up and just return the expression
-  expr
+  simplify_function_call(expr)
 }
