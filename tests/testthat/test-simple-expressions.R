@@ -39,6 +39,16 @@ test_that("we can differentiate variables times constants", {
 
 })
 
+test_that("we can differentiate expressions with parentheses", {
+  f <- function(x) 2*(x + 5)
+  df <- d(f, "x")
+  expect_equal(body(df), 2)
+
+  f <- function(x, y) 2*(x + y)
+  df <- d(f, "x")
+  expect_equal(body(df), 2)
+})
+
 test_that("we can differentiate exponetiation", {
   f <- function(x) x^2
   df <- d(f, "x")
