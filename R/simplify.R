@@ -4,11 +4,8 @@
 #' @return a simplified expression
 #' @export
 simplify_expr <- function(expr) {
-  if (is.numeric(expr)) {
+  if (is.atomic(expr) || is.name(expr)) {
     expr
-
-  } else if (is.name(expr)) {
-    expr # FIXME: we can do some partial evaluation here...
 
   } else if (is.call(expr)) {
     simplify_call(expr)
@@ -102,6 +99,7 @@ simplify_call <- function(expr) {
   if (expr[[1]] == as.name("(")) {
     subexpr <- simplify_expr(expr[[2]])
     if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
+    else if (is.call(subexpr) && subexpr[[1]] == as.name("(")) return(subexpr)
     else return(call("(", subexpr))
   }
 

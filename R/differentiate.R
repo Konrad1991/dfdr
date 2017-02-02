@@ -103,6 +103,7 @@ diff_call <- function(expr, x) {
   if (expr[[1]] == as.name("(")) {
     subexpr <- diff_expr(expr[[2]], x)
     if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
+    else if (is.call(subexpr) && subexpr[[1]] == as.name("(")) return(subexpr)
     else return(call("(", subexpr))
   }
 
