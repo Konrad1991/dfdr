@@ -49,6 +49,9 @@ test_that("we can do some simplifications when there are variables involved", {
   expect_equal(simplify_expr(quote(x / x)), quote(x / x)) # we probably want to simplify this...
 
   expect_equal(simplify_expr(quote(x ^ y)), quote(x ^ y))
+
+  expect_equal(simplify_expr(quote(2*(x + 0))), quote(2*x))
+  expect_equal(simplify_expr(quote(2*(x + y))), quote(2*(x + y)))
 })
 
 test_that("we can handle some simple functions", {

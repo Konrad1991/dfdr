@@ -99,6 +99,12 @@ simplify_call <- function(expr) {
 
   if (expr[[1]] == as.name("^")) return(simplify_exponentiation(expr[[2]], expr[[3]]))
 
+  if (expr[[1]] == as.name("(")) {
+    subexpr <- simplify_expr(expr[[2]])
+    if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
+    else return(call("(", subexpr))
+  }
+
   if (as.character(expr[[1]]) %in% .simplify_built_in_functions) return(simplify_built_in_function(expr))
 
   stop(paste0("Unexpected call ", deparse(expr)))
