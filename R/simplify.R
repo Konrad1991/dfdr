@@ -103,7 +103,9 @@ simplify_call <- function(expr) {
     else return(call("(", subexpr))
   }
 
-  if (as.character(expr[[1]]) %in% .simplify_built_in_functions) return(simplify_built_in_function(expr))
+  if (as.character(expr[[1]]) %in% .simplify_built_in_functions)
+    return(simplify_built_in_function(expr))
 
-  stop(paste0("Unexpected call ", deparse(expr)))
+  # if we get to this point, we give up and just return the expression
+  expr
 }

@@ -63,6 +63,6 @@ test_that("we can handle some simple functions", {
   expect_equal(simplify_expr(quote(sin(0*x))), 0)
 })
 
-test_that("we handle errors correctly", {
-  expect_error(simplify_expr(quote(x %in% y)))
+test_that("we give up with unexpected expressoins", {
+  expect_equal(simplify_expr(quote(x %in% y)), quote(x %in% y))
 })
