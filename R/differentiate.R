@@ -101,6 +101,7 @@ diff_general_function_call <- function(expr, x) {
 diff_call <- function(expr, x) {
   if (expr[[1]] == as.name("+"))
     return(diff_addition(expr[[2]], expr[[3]], x))
+
   if (expr[[1]] == as.name("-")) {
     if (length(expr) == 2)
       return(call("-", diff_expr(expr[[2]], x)))
