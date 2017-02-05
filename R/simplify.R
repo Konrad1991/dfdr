@@ -72,9 +72,8 @@ simplify_exponentiation <- function(f, g) {
   call("^", left, right)
 }
 
-# FIXME: I don't handle named arguments here...
 simplify_function_call <- function(expr) {
-  function_name <- as.character(expr[[1]])
+  function_name <- expr[[1]]
   arguments <- vector("list", length(expr) - 1)
   for (i in seq_along(arguments)) {
     arguments[i] <- list(simplify_expr(expr[[i + 1]]))
@@ -83,13 +82,13 @@ simplify_function_call <- function(expr) {
   # if we have simplified all expressions we might as well try calling the function
   # if it is a function we know...
   if (all(unlist(Map(is.numeric, arguments)))) {
-    if (function_name %in% c("sin", "cos", "exp", "log")) {
-      result <- do.call(function_name, arguments)
+    if (as.character(function_name) %in% c("sin", "cos", "exp", "log")) {
+      result <- do.call(as.character(function_name), arguments)
       names(result) <- names(expr)
       return(result)
     }
   }
-  result <- do.call("call", c(list(function_name), arguments), quote = TRUE)
+  result <- as.call(c(list(function_name), arguments))
   names(result) <- names(expr)
   result
 }
