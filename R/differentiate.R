@@ -38,7 +38,8 @@ diff_expr <- function(expr, x) {
     diff_call(expr, x)
 
   } else {
-    stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
+    stop(paste0("Unexpected expression ",
+                deparse(expr), " in parsing.")) # nocov
   }
 }
 
@@ -76,7 +77,7 @@ diff_exponentiation <- function(f, g, x) {
 }
 
 .built_in_functions <- c("sin", "cos", "exp")
-diff_built_in_function <- function(expr, x) {
+diff_built_in_function_call <- function(expr, x) {
   # chain rule with a known function to differentiate...
   if (expr[[1]] == as.name("sin"))
     return(call("*", call("cos", expr[[2]]), diff_expr(expr[[2]], x)))
@@ -88,26 +89,45 @@ diff_built_in_function <- function(expr, x) {
     return(call("*", call("exp", expr[[2]]), diff_expr(expr[[2]], x)))
 }
 
+diff_general_function_call <- function(expr, x) {
+  if (length(expr) == 2) {
+    # chain rule...
+    bquote(d(.(expr[[1]]), .(x))(.(expr[[2]])) * .(diff_expr(expr[[2]], x)))
+  } else {
+    stop(paste0("Unexpected call ", deparse(expr)))
+  }
+}
+
 diff_call <- function(expr, x) {
-  if (expr[[1]] == as.name("+")) return(diff_addition(expr[[2]], expr[[3]], x))
+  if (expr[[1]] == as.name("+"))
+    return(diff_addition(expr[[2]], expr[[3]], x))
   if (expr[[1]] == as.name("-")) {
-    if (length(expr) == 2) return(call("-", diff_expr(expr[[2]], x)))
-    else return(diff_subtraction(expr[[2]], expr[[3]], x))
+    if (length(expr) == 2)
+      return(call("-", diff_expr(expr[[2]], x)))
+    else
+      return(diff_subtraction(expr[[2]], expr[[3]], x))
   }
 
-  if (expr[[1]] == as.name("*")) return(diff_multiplication(expr[[2]], expr[[3]], x))
-  if (expr[[1]] == as.name("/")) return(diff_division(expr[[2]], expr[[3]], x))
+  if (expr[[1]] == as.name("*"))
+    return(diff_multiplication(expr[[2]], expr[[3]], x))
+  if (expr[[1]] == as.name("/"))
+    return(diff_division(expr[[2]], expr[[3]], x))
 
-  if (expr[[1]] == as.name("^")) return(diff_exponentiation(expr[[2]], expr[[3]], x))
+  if (expr[[1]] == as.name("^"))
+    return(diff_exponentiation(expr[[2]], expr[[3]], x))
 
   if (expr[[1]] == as.name("(")) {
     subexpr <- diff_expr(expr[[2]], x)
-    if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
-    else if (is.call(subexpr) && subexpr[[1]] == as.name("(")) return(subexpr)
-    else return(call("(", subexpr))
+    if (is.atomic(subexpr) || is.name(subexpr))
+      return(subexpr)
+    else if (is.call(subexpr) && subexpr[[1]] == as.name("("))
+      return(subexpr)
+    else
+      return(call("(", subexpr))
   }
 
-  if (as.character(expr[[1]]) %in% .built_in_functions) return(diff_built_in_function(expr, x))
-
-  stop(paste0("Unexpected call ", deparse(expr)))
+  if (as.character(expr[[1]]) %in% .built_in_functions)
+    return(diff_built_in_function_call(expr, x))
+  else
+    return(diff_general_function_call(expr, x))
 }
