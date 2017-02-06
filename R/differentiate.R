@@ -21,7 +21,7 @@ d <- function(f, x) {
     # for other functions we have to parse the body
     # and differentiate it.
     df <- f
-    e <- new.env(parent = environment(f))
+    e <- environment(f)
     body(df) <- simplify_expr(diff_expr(body(f), x, e))
     df
   }
@@ -101,9 +101,10 @@ diff_general_function_call <- function(expr, x, e) {
   arguments <- vector("list", length(full_call) - 1)
   for (i in seq_along(arguments)) {
     var <- variables[i + 1]
-    arg <- expr[[i + 1]]
-    arguments[i] <- list(bquote(d(.(function_name), .(var))(.(arg))
-                                * .(diff_expr(arg, x, e))))
+    dfdz <- full_call
+    dfdz[[1]] <- bquote(d(.(function_name), .(var)))
+    dzdx <- diff_expr(expr[[i + 1]], x, e)
+    arguments[[i]] <- bquote(.(dfdz) * .(dzdx))
   }
   as.call(c(list(sum), arguments))
 }

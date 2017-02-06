@@ -24,3 +24,17 @@ test_that("we can differentiate expressions with functions", {
   df <- d(f, "x")
   expect_equal(body(df), quote(-exp(x)))
 })
+
+test_that("we can differentiate general functions with the chain rule", {
+  f <- function(x, y) x^2 * y
+  g <- function(z) f(2*z, z^2)
+  h <- function(z) 4*z^4
+
+  zs <- seq(1,100,5)
+  expect_equal(g(zs), h(zs))
+
+  dg <- Vectorize(d(g,"z"))
+  dh <- d(h,"z")
+  expect_equal(dg(zs), dh(zs))
+})
+
