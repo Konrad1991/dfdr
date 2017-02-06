@@ -82,7 +82,8 @@ simplify_function_call <- function(expr) {
   # if we have simplified all expressions we might as well try calling the function
   # if it is a function we know...
   if (all(unlist(Map(is.numeric, arguments)))) {
-    if (as.character(function_name) %in% c("sin", "cos", "exp", "log")) {
+    if (is.name(function_name) &&
+        as.character(function_name) %in% c("sin", "cos", "exp", "log")) {
       result <- do.call(as.character(function_name), arguments)
       names(result) <- names(expr)
       return(result)
@@ -94,22 +95,24 @@ simplify_function_call <- function(expr) {
 }
 
 simplify_call <- function(expr) {
-  if (expr[[1]] == as.name("+")) return(simplify_addition(expr[[2]], expr[[3]]))
-  if (expr[[1]] == as.name("-")) {
-    if (length(expr) == 2) return(simplify_unary_subtraction(expr[[2]]))
-    else return(simplify_subtraction(expr[[2]], expr[[3]]))
-  }
+  if (is.name(expr[[1]])) {
+    if (expr[[1]] == as.name("+")) return(simplify_addition(expr[[2]], expr[[3]]))
+    if (expr[[1]] == as.name("-")) {
+      if (length(expr) == 2) return(simplify_unary_subtraction(expr[[2]]))
+      else return(simplify_subtraction(expr[[2]], expr[[3]]))
+    }
 
-  if (expr[[1]] == as.name("*")) return(simplify_multiplication(expr[[2]], expr[[3]]))
-  if (expr[[1]] == as.name("/")) return(simplify_division(expr[[2]], expr[[3]]))
+    if (expr[[1]] == as.name("*")) return(simplify_multiplication(expr[[2]], expr[[3]]))
+    if (expr[[1]] == as.name("/")) return(simplify_division(expr[[2]], expr[[3]]))
 
-  if (expr[[1]] == as.name("^")) return(simplify_exponentiation(expr[[2]], expr[[3]]))
+    if (expr[[1]] == as.name("^")) return(simplify_exponentiation(expr[[2]], expr[[3]]))
 
-  if (expr[[1]] == as.name("(")) {
-    subexpr <- simplify_expr(expr[[2]])
-    if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
-    else if (is.call(subexpr) && subexpr[[1]] == as.name("(")) return(subexpr)
-    else return(call("(", subexpr))
+    if (expr[[1]] == as.name("(")) {
+      subexpr <- simplify_expr(expr[[2]])
+      if (is.atomic(subexpr) || is.name(subexpr)) return(subexpr)
+      else if (is.call(subexpr) && subexpr[[1]] == as.name("(")) return(subexpr)
+      else return(call("(", subexpr))
+    }
   }
 
   simplify_function_call(expr)
