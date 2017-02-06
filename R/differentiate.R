@@ -39,8 +39,7 @@ diff_expr <- function(expr, x, e) {
     diff_call(expr, x, e)
 
   } else {
-    stop(paste0("Unexpected expression ",
-                deparse(expr), " in parsing.")) # nocov
+    stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
   }
 }
 
