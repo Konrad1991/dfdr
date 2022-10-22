@@ -1,34 +1,54 @@
+# Literals should be numbers or variables. Not any atomic type will do
+# if we expect to differentiate.
+is_literal <- function(expr) {
+  rlang::is_scalar_double(expr) ||
+  rlang::is_scalar_integer(expr) ||
+  is.name(expr)
+}
+
+# Error handling (rudimentary as it is)
+simplify_error <- function(expr) {
+  stop(paste0("Unexpected expression ", deparse(expr), " in simplifying"))
+}
+
 #' Simplify an expression by computing the values for constant expressions
 #'
 #' @param expr An expression
 #' @return a simplified expression
 #' @export
 simplify_expr <- function(expr) {
-  if (is.atomic(expr) || is.name(expr)) {
-    expr
-
-  } else if (is.call(expr)) {
-    simplify_call(expr)
-
-  } else {
-    stop(paste0("Unexpected expression ", deparse(expr), " in simplifying")) # nocov
-  }
+  # Pick function to dispatch to
+  dispatch <- expr |> purrr::when(
+    is_literal(.)     ~ identity,
+    rlang::is_call(.) ~ simplify_call,
+                      ~ simplify_error
+    )
+  dispatch(expr) # and dispatch
 }
 
-simplify_addition <- function(f, g) {
-  left <- simplify_expr(f)
-  right <- simplify_expr(g)
-  if (left == 0) return(right)
-  if (right == 0) return(left)
-  if (is.numeric(left) && is.numeric(right)) return(left + right)
-  call("+", left, right)
+simplify_addition <- function(lhs, rhs) {
+  lhs <- simplify_expr(lhs)
+  rhs <- simplify_expr(rhs)
+  lhs |> purrr::when( # not actually using first arg, but doing a case
+    lhs == 0                               ~ rhs,
+    rhs == 0                               ~ lhs,
+    is.numeric(lhs) && is.numeric(rhs)     ~ lhs + rhs,
+                                           ~ bquote( .(lhs) + .(rhs) )
+  )
 }
+
+call_name <- function(expr)      { expr[[1]] }
+call_arg  <- function(expr, arg) { expr[[1+arg]] }
 
 simplify_unary_subtraction <- function(f) {
-   simplified <- simplify_expr(f)
-   if (is.numeric(simplified)) -simplified
-   else if (is.call(simplified) && simplified[[1]] == "-") simplified[[2]]
-   else bquote(-.(simplified))
+  simplify_expr(f) |> purrr::when(
+    # If numeric, just change the sign right now
+    is.numeric(.)                              ~ (-.),
+    # If the expression starts with -, remove it
+    (rlang::is_call(.) && call_name(.) == "-") ~ call_arg(., 1),
+    # In the general case, put a - in front of the expression
+                                               ~ bquote( - .(.) )
+  )
 }
 
 simplify_subtraction <- function(f, g) {
