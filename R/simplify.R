@@ -90,26 +90,28 @@ simplify_exponentiation <- function(expr) {
   )
 }
 
-simplify_function_call <- function(expr) {
-  function_name <- expr[[1]]
-  arguments <- vector("list", length(expr) - 1)
-  for (i in seq_along(arguments)) {
-    arguments[i] <- list(simplify_expr(expr[[i + 1]]))
-  }
+# FIXME: This might not be the best approach... I'm not sure how well exists() and get()
+# will work for user-defined functions
+known_function <- function(name) {
+  exists(name) && is.function(get(name))
+}
 
-  # if we have simplified all expressions we might as well try calling the function
-  # if it is a function we know...
-  if (all(unlist(Map(is.numeric, arguments)))) {
-    if (is.name(function_name) &&
-        as.character(function_name) %in% c("sin", "cos", "exp", "log")) {
-      result <- do.call(as.character(function_name), arguments)
-      names(result) <- names(expr)
-      return(result)
-    }
-  }
-  result <- as.call(c(list(function_name), arguments))
+replace_arguments <- function(expr, new_args) {
+  result <- as.call(c(call_name(expr), new_args))
   names(result) <- names(expr)
   result
+}
+
+simplify_function_call <- function(expr) {
+  function_name <- call_name(expr)
+  arguments <- simplify_args(expr)
+  if (all(purrr::map_lgl(arguments, is.numeric)) && known_function(function_name)) {
+    # if we have simplified all expressions we might as well try calling the function
+    # if it is a function we know...
+    do.call(get(function_name), arguments)
+  } else {
+    replace_arguments(expr, arguments)
+  }
 }
 
 simplify_parens <- function(expr) {
