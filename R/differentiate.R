@@ -19,6 +19,7 @@ d <- function(f, x) {
     if (identical(f, sin)) return(cos)
     if (identical(f, cos)) return(function(x) -sin(x))
     if (identical(f, exp)) return(exp)
+    if (identical(f, c))   return(diff_vector_out(f, x, environment(f)))
 
     stop("unknown primitive") # nocov
 
@@ -30,6 +31,11 @@ d <- function(f, x) {
     body(df) <- simplify_expr(diff_expr(body(f), x, e))
     df
   }
+}
+
+diff_vector_out <- function(expr, x, e) {
+  stop("not implemented yet")
+  #call_args(expr) |> purrr::map(\(ex) diff_call(ex, x, e))
 }
 
 diff_expr <- lift(function(expr, x, e) {
@@ -102,7 +108,7 @@ diff_general_function_call <- lift(function(expr, x, e) {
     stop(paste0("Unexpected call ", deparse(expr)))
 
   func <- get(function_name, e)
-  full_call <- match.call(func, expr)
+  full_call <- rlang::call_match(expr, func)
   variables <- names(full_call)
 
   arguments <- vector("list", length(full_call) - 1)

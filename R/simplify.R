@@ -19,6 +19,8 @@ call_arg  <- function(expr, arg) {
   # get its result as an argument can deal with NULL
   if (arg < length(expr)) expr[[1+arg]]  else NULL
 }
+call_args <- function(expr) expr[2:length(expr)]
+
 # Lifts a function so it will propagate NULL and otherwise do its thing
 lift <- function(f) {
   function(x, ...) if (rlang::is_null(x)) x else f(x, ...)
