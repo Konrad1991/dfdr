@@ -33,8 +33,8 @@ test_that("we can differentiate general functions with the chain rule", {
   zs <- seq(1,100,5)
   expect_equal(g(zs), h(zs))
 
-  dg <- Vectorize(d(g,"z"))
-  dh <- d(h,"z")
+  dg <- Vectorize(d(g, "z"))
+  dh <- d(h, "z")
   expect_equal(dg(zs), dh(zs))
 })
 

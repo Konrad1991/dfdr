@@ -28,73 +28,68 @@ d <- function(f, x) {
 }
 
 diff_expr <- function(expr, x, e) {
-  if (is.numeric(expr)) {
-    quote(0)
-
-  } else if (is.name(expr)) {
-    if (expr == x) quote(1)
-    else quote(0)
-
-  } else if (is.call(expr)) {
-    diff_call(expr, x, e)
-
-  } else {
-    stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
-  }
+  expr |> purrr::when(
+    is.numeric(.)              ~ quote(0),
+    is.name(.) && . == x       ~ quote(1),
+    is.name(.)                 ~ quote(0),
+    is.call(.)                 ~ diff_call(expr, x, e),
+    ~ stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
+  )
 }
 
-
 diff_addition <- function(f, g, x, e) {
-  call("+", diff_expr(f, x, e), diff_expr(g, x, e))
+  lhs <- diff_expr(f, x, e)
+  rhs <- diff_expr(g, x, e)
+  bquote( .(lhs) + .(rhs) )
 }
 
 diff_subtraction <- function(f, g, x, e) {
-  call("-", diff_expr(f, x, e), diff_expr(g, x, e))
+  lhs <- diff_expr(f, x, e)
+  rhs <- diff_expr(g, x, e)
+  bquote( .(lhs) - .(rhs) )
 }
 
 diff_multiplication <- function(f, g, x, e) {
   # f' g + f g'
-  call("+",
-       call("*", diff_expr(f, x, e), g),
-       call("*", f, diff_expr(g, x, e)))
+  df <- diff_expr(f, x, e)
+  dg <- diff_expr(g, x, e)
+  bquote( .(df)*.(g) + .(f)*.(dg) )
 }
 
 diff_division <- function(f, g, x, e) {
   # (f' g − f g' )/g**2
-  call("/",
-       call("-",
-        call("*", diff_expr(f, x, e), g),
-        call("*", f, diff_expr(g, x, e))),
-       call("^", g, 2))
+  df <- diff_expr(f, x, e)
+  dg <- diff_expr(g, x, e)
+  bquote( ( .(df)*.(g) - .(f)*.(dg) ) / .(g)**2 )
 }
 
 diff_exponentiation <- function(f, g, x, e) {
   # Using the chain rule to handle this generally.
   # if y = f**g then dy/dx = dy/df df/dx = g * f**(g-1) * df/dx
-  dydf <- call("*", g, call("^", f, substitute(n - 1, list(n = g))))
-  dfdx <- diff_expr(f, x, e)
-  call("*", dydf, dfdx)
+  df <- diff_expr(f, x, e)
+  bquote( .(g) * .(f)**(.(g)-1) * .(df) )
 }
 
+# FIXME: This is a mess with only a few functions I could think of handled...
 .built_in_functions <- c("sin", "cos", "exp")
 diff_built_in_function_call <- function(expr, x, e) {
-  # chain rule with a known function to differentiate...
-  if (expr[[1]] == as.name("sin"))
-    return(call("*", call("cos", expr[[2]]), diff_expr(expr[[2]], x, e)))
-
-  if (expr[[1]] == as.name("cos"))
-    return(call("*", call("-", call("sin", expr[[2]])), diff_expr(expr[[2]], x, e)))
-
-  if (expr[[1]] == as.name("exp"))
-    return(call("*", call("exp", expr[[2]]), diff_expr(expr[[2]], x, e)))
+  # chain rule with a known function to differentiate. df/dx = df/dy dy/dx
+  y <- call_arg(expr, 1)
+  dy_dx <- diff_expr(call_arg(expr, 1), x, e)
+  call_name(expr) |> purrr::when(
+    . == "sin" ~ bquote(  cos(.(y)) * .(dy_dx)),
+    . == "cos" ~ bquote( -sin(.(y)) * .(dy_dx)),
+    . == "exp" ~ bquote(  exp(.(y)) * .(dy_dx))
+  )
 }
 
+
 diff_general_function_call <- function(expr, x, e) {
-  function_name <- expr[[1]]
+  function_name <- call_name(expr)
   if (!is.name(function_name))
     stop(paste0("Unexpected call ", deparse(expr)))
 
-  func <- get(as.character(function_name), e)
+  func <- get(function_name, e)
   full_call <- match.call(func, expr)
   variables <- names(full_call)
 
@@ -110,6 +105,27 @@ diff_general_function_call <- function(expr, x, e) {
 }
 
 diff_call <- function(expr, x, e) {
+  # FIXME: extend this to be the results...
+  # print(call_name(expr))
+  # call_name(expr) |> purrr::when(
+  #   . == "+" ~ iff_addition(call_arg(expr, 1), call_arg(expr, 2), x, e),
+  #   #(. == "-" && length(expr) == 2) ~ bquote(- .(diff_expr(call_arg(expr, 1), x, e))),
+  #   #. == "-" ~ diff_addition(call_arg(expr, 1), call_arg(expr, 2), x, e),
+  #   #. == "*" ~ diff_multiplication(call_arg(expr, 1), call_arg(expr, 2), x, e),
+  #   #. == "/" ~ diff_division(call_arg(expr, 1), call_arg(expr, 2), x, e),
+  #   #. == "^" ~ diff_exponentiation(call_arg(expr, 1), call_arg(expr, 2), x, e),
+  #   # . == "(" ~  {
+  #   #   subexpr <- diff_expr(expr[[2]], x, e)
+  #   #   if (is.atomic(subexpr) || is.name(subexpr)) subexpr
+  #   #   else if (is.call(subexpr) && subexpr[[1]] == as.name("("))
+  #   #     subexpr
+  #   #   else
+  #   #     call("(", subexpr)
+  #   # }
+  #   ~ expr # FIXME: fake final case
+  # )
+  # FIXME end
+
   if (is.name(expr[[1]])) {
     if (expr[[1]] == as.name("+"))
       return(diff_addition(expr[[2]], expr[[3]], x, e))
