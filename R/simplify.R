@@ -13,7 +13,16 @@ simplify_args <- function(expr) purrr::map(expr[2:length(expr)], simplify_expr)
 lhs <- function(args) args[[1]]
 rhs <- function(args) args[[2]]
 call_name <- function(expr)      { expr[[1]] }
-call_arg  <- function(expr, arg) { expr[[1+arg]] }
+call_arg  <- function(expr, arg) {
+  # We allow this to return NULL when out of bounds, as that some
+  # places simplifies the code. Just make sure that functions that can
+  # get its result as an argument can deal with NULL
+  if (arg < length(expr)) expr[[1+arg]]  else NULL
+}
+# Lifts a function so it will propagate NULL and otherwise do its thing
+lift <- function(f) {
+  function(x, ...) if (rlang::is_null(x)) x else f(x, ...)
+}
 
 
 # Error handling (rudimentary as it is)
@@ -26,42 +35,42 @@ simplify_error <- function(expr) {
 #' @param expr An expression
 #' @return a simplified expression
 #' @export
-simplify_expr <- function(expr) {
+simplify_expr <- lift(function(expr) {
   expr |> purrr::when(
     is_literal(.)     ~ identity(.),
     rlang::is_call(.) ~ simplify_call(.),
                       ~ simplify_error(.)
     )
-}
+})
 
 
-simplify_addition <- function(expr) {
+simplify_addition <- lift(function(expr) {
   expr |> simplify_args() |> purrr::when(
     lhs(.) == 0                               ~ rhs(.),
     rhs(.) == 0                               ~ lhs(.),
     is.numeric(lhs(.)) && is.numeric(rhs(.))  ~ lhs(.) + rhs(.),
                                               ~ bquote( .(lhs(.)) + .(rhs(.)) )
   )
-}
+})
 
-simplify_unary_subtraction <- function(expr) {
+simplify_unary_subtraction <- lift(function(expr) {
   expr |> simplify_args() |> lhs() |> purrr::when(
     is.numeric(.)                                 ~ (-.),
     (rlang::is_call(.) && call_name(.) == "-")    ~ call_arg(., 1), # - - = +
                                                   ~ bquote( - .(.) )
   )
-}
+})
 
-simplify_subtraction <- function(expr) {
+simplify_subtraction <- lift(function(expr) {
   expr |> simplify_args() |> purrr::when(
     is.numeric(lhs(.)) && is.numeric(rhs(.))   ~ lhs(.) - rhs(.),
     lhs(.) == 0                                ~ bquote(-.(rhs(.))),
     rhs(.) == 0                                ~ lhs(.),
                                                ~ bquote( .(lhs(.)) - .(rhs(.)) )
   )
-}
+})
 
-simplify_multiplication <- function(expr) {
+simplify_multiplication <- lift(function(expr) {
   expr |> simplify_args() |> purrr::when(
     is.numeric(lhs(.)) && is.numeric(rhs(.))    ~ lhs(.) * rhs(.),
     lhs(.) == 0 || rhs(.) == 0                  ~ 0,
@@ -69,17 +78,17 @@ simplify_multiplication <- function(expr) {
     rhs(.) == 1                                 ~ lhs(.),
                                                 ~ bquote( .(lhs(.)) * .(rhs(.)) )
   )
-}
+})
 
-simplify_division <- function(expr) {
+simplify_division <- lift(function(expr) {
   expr |> simplify_args() |> purrr::when(
     is.numeric(lhs(.)) && is.numeric(rhs(.))    ~ lhs(.) / rhs(.),
     rhs(.) == 1                                 ~ lhs(.),
                                                 ~ bquote( .(lhs(.)) / .(rhs(.)) )
   )
-}
+})
 
-simplify_exponentiation <- function(expr) {
+simplify_exponentiation <- lift(function(expr) {
   expr |> simplify_args() |> purrr::when(
     is.numeric(lhs(.)) && is.numeric(rhs(.))    ~ lhs(.) ^ rhs(.),
     rhs(.) == 0                                 ~ 1,
@@ -88,7 +97,7 @@ simplify_exponentiation <- function(expr) {
     rhs(.) == 1                                 ~ lhs(.),
                                                 ~ bquote( .(lhs(.)) ^ .(rhs(.)) )
   )
-}
+})
 
 # FIXME: This might not be the best approach... I'm not sure how well exists() and get()
 # will work for user-defined functions
@@ -102,7 +111,7 @@ replace_arguments <- function(expr, new_args) {
   result
 }
 
-simplify_function_call <- function(expr) {
+simplify_function_call <- lift(function(expr) {
   function_name <- call_name(expr)
   arguments <- simplify_args(expr)
   if (all(purrr::map_lgl(arguments, is.numeric)) && known_function(function_name)) {
@@ -112,16 +121,16 @@ simplify_function_call <- function(expr) {
   } else {
     replace_arguments(expr, arguments)
   }
-}
+})
 
-simplify_parens <- function(expr) {
+simplify_parens <- lift(function(expr) {
   expr |> call_arg(1) |> simplify_expr() |> purrr::when(
     is.atomic(.) || is.name(.) || (rlang::is_call(.) && call_name(.) == "(") ~ .,
     ~ bquote( ( .(.) ) )
   )
-}
+})
 
-simplify_call <- function(expr) {
+simplify_call <- lift(function(expr) {
   simplifier <- call_name(expr) |> purrr::when(
     is.name(.) ~ . |> purrr::when(
       . == "+"                         ~ simplify_addition,
@@ -137,4 +146,5 @@ simplify_call <- function(expr) {
     ~ simplify_function_call
   )
   simplifier(expr)
-}
+})
+
