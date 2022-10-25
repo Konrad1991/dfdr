@@ -17,9 +17,18 @@ d <- function(f, x) {
   # not exhaustive.
   if (is.null(body(f))) {
     if (identical(f, sin)) return(cos)
+    if (identical(f, sinh)) return(cosh)
+    if (identical(f, asin)) return(function(x) 1/sqrt(1 - x^2))
     if (identical(f, cos)) return(function(x) -sin(x))
+    if (identical(f, cosh)) return(sinh)
+    if (identical(f, acos)) return(function(x) -asin(x))
     if (identical(f, exp)) return(exp)
-
+    if (identical(f, tan)) return(function(x) 1/cos(x)^2)
+    if (identical(f, tanh)) return(function(x) 1 - tanh(x^2))
+    if (identical(f, atan)) return(function(x) 1/(1 + x^2) )
+    if (identical(f, sqrt)) return(function(x) 1/(2*sqrt(x)) )
+    if (identical(f, log)) return(function(x) 1/x)
+    
     stop("unknown primitive") # nocov
 
   } else {
@@ -90,15 +99,27 @@ diff_exponentiation <- function(expr, x, e) {
 }
 
 # FIXME: This is a mess with only a few functions I could think of handled...
-.built_in_functions <- c("sin", "cos", "exp")
+.built_in_functions <- c("sin", "sinh", "asin",
+                         "cos", "cosh", "acos",
+                         "tan", "tanh", "atan",
+                         "exp", "log", "sqrt")
 diff_built_in_function_call <- lift(function(expr, x, e) {
   # chain rule with a known function to differentiate. df/dx = df/dy dy/dx
   y <- call_arg(expr, 1)
   dy_dx <- diff_expr(call_arg(expr, 1), x, e)
   call_name(expr) |> purrr::when(
-    . == "sin" ~ bquote(  cos(.(y)) * .(dy_dx)),
-    . == "cos" ~ bquote( -sin(.(y)) * .(dy_dx)),
-    . == "exp" ~ bquote(  exp(.(y)) * .(dy_dx))
+    . == "sin" ~  bquote(  cos(.(y)) * .(dy_dx)),
+    . == "sinh" ~ bquote(  cosh(.(y)) * .(dy_dx)),
+    . == "asin" ~ bquote(  (1/sqrt(1 - .(y)^2)) *  .(dy_dx)),
+    . == "cos" ~  bquote( -sin(.(y)) * .(dy_dx)),
+    . == "cosh" ~ bquote(  sinh(.(y)) * .(dy_dx)),
+    . == "acos" ~ bquote(  -asin(.(y)) * .(dy_dx)),
+    . == "tan" ~  bquote(  exp(.(y)) * .(dy_dx)),
+    . == "tanh" ~ bquote(  (1 - tanh(.(y)^2)) * .(dy_dx)),
+    . == "atan" ~ bquote(  (1 / (1 + .(y)^2)) * .(dy_dx)),
+    . == "exp" ~  bquote(  exp(.(y)) * .(dy_dx)),
+    . == "log" ~  bquote(  (1/ .(y)) * .(dy_dx)),
+    . == "sqrt" ~ bquote(  (0.5 * .(y)^(-0.5)) * .(dy_dx))
   )
 })
 
@@ -131,6 +152,7 @@ diff_parens <- function(expr, x, e) {
   else
     call("(", subexpr)
 }
+
 
 diff_call <- lift(function(expr, x, e) {
   arg1 <- call_arg(expr, 1)
