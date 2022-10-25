@@ -1,3 +1,23 @@
+# missing functions
+#   sinh, cosh, tanh
+#   asin, acos, atan
+#   sqrt
+#   if, else if, else
+#   cmr
+#   [
+
+# other functions --> currently don't know what to do with them
+#   :      
+#   c
+#   matrix, vector
+#   =, <- 
+
+# forbidden functions
+#   for-loop
+#   RNG functions
+
+
+
 # Lifts a function so it will propagate NULL and otherwise do its thing
 lift <- function(f) {
   function(x, ...) if (rlang::is_null(x)) x else f(x, ...)
@@ -28,7 +48,6 @@ d <- function(f, x) {
     if (identical(f, atan)) return(function(x) 1/(1 + x^2) )
     if (identical(f, sqrt)) return(function(x) 1/(2*sqrt(x)) )
     if (identical(f, log)) return(function(x) 1/x)
-    
     stop("unknown primitive") # nocov
 
   } else {
