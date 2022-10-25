@@ -14,10 +14,13 @@ gradient <- function(f, vars = NULL, use_names = FALSE) {
   if (is.null(vars)) {
     vars <- names(formals(f))
   }
-  derivatives <- Map(function(v) d(f, v), vars)
-  function(...) {
-    unlist(Map(function(df) df(...), derivatives), use.names = use_names)
-  }
+  grad <- vars |> purrr::map(\(x) d(f, x) |> body())
+  names(vars) <- vars # Not right, but fix it later
+  rlang::new_function(vars, grad, environment(f))
+  #derivatives <- Map(function(v) d(f, v), vars)
+  #function(...) {
+  #  unlist(Map(function(df) df(...), derivatives), use.names = use_names)
+  #}
 }
 
 #' Compute the Hessian-function of a function.
