@@ -27,10 +27,13 @@ lift <- function(f) {
 #' Differentiate a function for a single variable.
 #'
 #' @param f  The function to differentiate.
-#' @param x  The variable that f should be differentiated with respect to.
+#' @param x  The variable that f should be differentiated with respect to.#
+#' @param fct_deriv_list An S4 class of type *fcts* that defines additional function derivative pairs.
 #' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
-d <- function(f, x) {
+d <- function(f, x, fct_deriv_list = NULL) {
+  
+  fl <- init_fct_list()
 
   # Primitive functions, we have to treat carefully. They don't have a body.
   # This is just a short list of such built-in arithmetic functions, it is
@@ -133,7 +136,7 @@ diff_built_in_function_call <- lift(function(expr, x, e) {
     . == "cos" ~  bquote( -sin(.(y)) * .(dy_dx)),
     . == "cosh" ~ bquote(  sinh(.(y)) * .(dy_dx)),
     . == "acos" ~ bquote(  -asin(.(y)) * .(dy_dx)),
-    . == "tan" ~  bquote(  exp(.(y)) * .(dy_dx)),
+    . == "tan" ~  bquote(  tan(.(y))^2 * .(dy_dx)),
     . == "tanh" ~ bquote(  (1 - tanh(.(y)^2)) * .(dy_dx)),
     . == "atan" ~ bquote(  (1 / (1 + .(y)^2)) * .(dy_dx)),
     . == "exp" ~  bquote(  exp(.(y)) * .(dy_dx)),
