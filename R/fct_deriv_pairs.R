@@ -1,8 +1,9 @@
 fct <- setClass(
   "fct",
   slots = list(
-  f = "function",
-  dfdx = "function"
+    name = "character",
+    f = "function",
+    dfdx = "function"
   )
 )
 
@@ -45,7 +46,7 @@ setMethod(
   f = "add_fct",
   signature = "fcts",
   definition = function(obj, name, f_new, dfdx_new) {
-    obj@funs[[name]] = fct(f=f_new, dfdx=dfdx_new)
+    obj@funs[[name]] = fct(name = name, f=f_new, dfdx=dfdx_new)
     obj
   }
 )
@@ -57,12 +58,29 @@ setMethod(
     obj@funs[[name]]
   } 
 )
+
 setMethod(
   f = "get_derivative",
   signature = "fcts",
   definition = function(obj, name) {
     obj@funs[[name]]@dfdx
   } 
+)
+
+setGeneric(
+  name = "get_names",
+  def = function(obj) {
+    standardGeneric("get_names")
+  } 
+)
+
+setMethod(
+  f = "get_names",
+  signature = "fcts",
+  definition = function(obj) {
+    l <- obj@funs
+    sapply(l, function(x) x@name)
+  }
 )
 
 init_fct_list <- function() {
@@ -81,8 +99,3 @@ init_fct_list <- function() {
   f <- add_fct(f, "sqrt", sqrt, function(x) 0.5 * x^(-0.5))
   return(f)
 }
-
-
-get_fct(f, "sin")
-get_derivative(f, "sin")
-get_derivative(f, "cos")
