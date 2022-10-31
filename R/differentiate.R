@@ -1,21 +1,3 @@
-# missing functions
-#   sinh, cosh, tanh
-#   asin, acos, atan
-#   sqrt
-#   if, else if, else
-#   cmr
-#   [
-
-# other functions --> currently don't know what to do with them
-#   :      
-#   c
-#   matrix, vector
-#   =, <- 
-
-# forbidden functions
-#   for-loop
-#   RNG functions
-
 # Lifts a function so it will propagate NULL and otherwise do its thing
 lift <- function(f) {
   function(x, ...) if (rlang::is_null(x)) x else f(x, ...)
@@ -25,16 +7,16 @@ lift <- function(f) {
 #'
 #' @param f  The function to differentiate.
 #' @param x  The variable that f should be differentiated with respect to.#
-#' @param fct_deriv_list An S4 class of type *fcts* that defines additional function derivative pairs.
+#' @param derivs An S4 class of type *fcts* that defines additional derivatives.
 #' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
-d <- function(f, x) {
+d <- function(f, x, derivs = NULL) {
 
   fl <- init_fct_list()
-  
-  #if(!is.null(fct_deriv_list)) {
-   # fl <- list(fl, fct_deriv_list)
-  #}
+
+  if(!is.null(derivs)) {
+  fl <- list(fl, derivs)
+  }
 
   # Primitive functions, we have to treat carefully. They don't have a body.
   # This is just a short list of such built-in arithmetic functions, it is
@@ -125,8 +107,8 @@ diff_built_in_function_call <- lift(function(expr, x, fl) {
   y <- call_arg(expr, 1)
   dy_dx <- diff_expr(call_arg(expr, 1), x, fl)
   name <- call_name(expr)
-  fct <- body(get_derivative(fl, name))
-  bquote(.(fct) * .(dy_dx))
+  fct <- get_derivative(fl, name)
+  bquote( .(fct(y)) * .(dy_dx) )
 })
 
 diff_general_function_call <- lift(function(expr, x, fl) {
