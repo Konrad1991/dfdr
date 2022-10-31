@@ -4,7 +4,7 @@
 \alias{simplify_expr}
 \title{Simplify an expression by computing the values for constant expressions}
 \usage{
-simplify_expr(expr)
+simplify_expr(x, ...)
 }
 \arguments{
 \item{expr}{An expression}
@@ -15,4 +15,3 @@ a simplified expression
 \description{
 Simplify an expression by computing the values for constant expressions
 }
-

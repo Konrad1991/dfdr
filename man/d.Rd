@@ -4,12 +4,14 @@
 \alias{d}
 \title{Differentiate a function for a single variable.}
 \usage{
-d(f, x)
+d(f, x, derivs = NULL)
 }
 \arguments{
 \item{f}{The function to differentiate.}
 
-\item{x}{The variable that f should be differentiated with respect to.}
+\item{x}{The variable that f should be differentiated with respect to.#}
+
+\item{derivs}{An S4 class of type *fcts* that defines additional derivatives.}
 }
 \value{
 \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
@@ -17,4 +19,3 @@ d(f, x)
 \description{
 Differentiate a function for a single variable.
 }
-

@@ -2,22 +2,14 @@ fct <- setClass(
   "fct",
   slots = list(
     name = "character",
-    f = "function",
     dfdx = "function"
   )
 )
 
 setGeneric(
   name = "add_fct",
-  def = function(obj, name, f_new, dfdx_new) {
+  def = function(obj, name, dfdx_new) {
     standardGeneric("add_fct")
-  } 
-)
-
-setGeneric(
-  name = "get_fct",
-  def = function(obj, name) {
-    standardGeneric("get_fct")
   } 
 )
 
@@ -45,18 +37,10 @@ setMethod(
 setMethod(
   f = "add_fct",
   signature = "fcts",
-  definition = function(obj, name, f_new, dfdx_new) {
-    obj@funs[[name]] = fct(name = name, f=f_new, dfdx=dfdx_new)
+  definition = function(obj, name, dfdx_new) {
+    obj@funs[[name]] = fct(name = name, dfdx=dfdx_new)
     obj
   }
-)
-
-setMethod(
-  f = "get_fct",
-  signature = "fcts",
-  definition = function(obj, name) {
-    obj@funs[[name]]
-  } 
 )
 
 setMethod(
@@ -85,17 +69,17 @@ setMethod(
 
 init_fct_list <- function() {
   f <- fcts()
-  f <- add_fct(f, "sin",  sin,  cos)
-  f <- add_fct(f, "sinh", sinh, cosh)
-  f <- add_fct(f, "asin", asin, function(x) 1/(sqrt(1 - x^2)))
-  f <- add_fct(f, "cos",  cos,  function(x) -sin(x)) # \ is cool. But only supported starting from R 4.2. 
-  f <- add_fct(f, "cosh", cosh, sinh)
-  f <- add_fct(f, "acos", acos, function(x) -asin(x))
-  f <- add_fct(f, "tan",  tan,  function(x) tan(x)^2 + 1)
-  f <- add_fct(f, "tanh", tanh, function(x) 1 - tanh(x)^2)  
-  f <- add_fct(f, "atan", atan, function(x) 1 / (1 + x^2) )
-  f <- add_fct(f, "exp",  exp,  exp)
-  f <- add_fct(f, "log",  log,  function(x) 1/x)
-  f <- add_fct(f, "sqrt", sqrt, function(x) 0.5 * x^(-0.5))
+  f <- add_fct(f, "sin",  function(x) bquote(cos(.(x))) )
+  f <- add_fct(f, "sinh", function(x) bquote(cosh(.(x))) )
+  f <- add_fct(f, "asin", function(x) bquote( 1/(sqrt(1 - .(x)^2) )) ) 
+  f <- add_fct(f, "cos",  function(x)bquote(-sin(.(x))) ) 
+  f <- add_fct(f, "cosh", function(x) bquote(sinh(.(x))) )
+  f <- add_fct(f, "acos", function(x) bquote(-asin(.(x))) )
+  f <- add_fct(f, "tan",  function(x) bquote(tan(.(x))^2 + 1) )
+  f <- add_fct(f, "tanh", function(x) bquote(1 - tanh(.(x))^2 ) )
+  f <- add_fct(f, "atan", function(x) bquote(1 / (1 + .(x)^2) ) )
+  f <- add_fct(f, "exp",  function(x) bquote(exp(.(x))) )
+  f <- add_fct(f, "log",  function(x) bquote(1/.(x)))
+  f <- add_fct(f, "sqrt", function(x) bquote(0.5 * .(x)^(-0.5)))
   return(f)
 }

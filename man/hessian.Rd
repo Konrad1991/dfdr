@@ -22,4 +22,3 @@ A function that computes the gradient of f at any point.
 Creates a function that computes the second-order derivatives of a function with respect to each pair of parameters
 and return a vector of these.
 }
-
