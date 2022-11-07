@@ -15,7 +15,10 @@ d <- function(f, x, derivs = NULL) {
   fl <- init_fct_list()
 
   if(!is.null(derivs)) {
-  fl <- list(fl, derivs)
+    fd <- derivs@funs
+    for(i in seq_along(fd)) {
+      fl <- append_fct(fl, fd[[i]]@name, fd[[i]]@dfdx, fd[[i]]@name_deriv)
+    }
   }
 
   # Primitive functions, we have to treat carefully. They don't have a body.
@@ -40,7 +43,7 @@ d <- function(f, x, derivs = NULL) {
     # for other functions we have to parse the body
     # and differentiate it.
     df <- f
-    body(df) <- simplify_expr(diff_expr(body(f), x, fl))
+    body(df) <- simplify_expr(diff_expr(body(f), x, fl)) 
     df
   }
 }
@@ -104,11 +107,33 @@ diff_exponentiation <- function(expr, x, fl) {
 
 diff_built_in_function_call <- lift(function(expr, x, fl) {
   # chain rule with a known function to differentiate. df/dx = df/dy dy/dx
-  y <- call_arg(expr, 1)
-  dy_dx <- diff_expr(call_arg(expr, 1), x, fl)
   name <- call_name(expr)
-  fct <- get_derivative(fl, name)
-  bquote( .(fct(y)) * .(dy_dx) )
+  name_deriv <- get_derivative_name(fl, name)
+  len <- length(expr)
+  args <- sapply(seq_along(2:len), function(x) call_arg(expr, x))
+  dy_dx <- sapply(args, function(as) diff_expr(as, x, fl) )
+  outer_deriv <- do.call(call, c(name_deriv, args), quote = TRUE)
+  entire_deriv <- NULL
+  for(i in seq_along(dy_dx)) {
+    inner_deriv <- dy_dx[[i]]
+    entire_deriv = c(entire_deriv, bquote(.(inner_deriv) * .(outer_deriv)) )
+  }
+  for(i in seq_along(entire_deriv)) {
+    deriv_current <- entire_deriv[[i]]
+    deriv_current <- simplify_expr(deriv_current)
+    if(deriv_current == 0) {
+      entire_deriv[[i]] <- NA
+    } else {
+      entire_deriv[[i]] <- deriv_current
+    }
+  }
+  entire_deriv <- entire_deriv[!is.na(entire_deriv)]
+  if(len > 2) {
+    entire_deriv <- paste(entire_deriv, collapse = "+")
+  } else {
+    entire_deriv <- paste(entire_deriv)
+  }
+  str2lang(entire_deriv)
 })
 
 diff_general_function_call <- lift(function(expr, x, fl) {
@@ -116,6 +141,7 @@ diff_general_function_call <- lift(function(expr, x, fl) {
   if (!is.name(function_name))
     stop(paste0("Unexpected call ", deparse(expr)))
 
+  print(function_name)
   func <- get(function_name, fl)
   full_call <- rlang::call_match(expr, func)
   variables <- names(full_call)

@@ -14,15 +14,15 @@ test_that("we can differentiate known functions", {
 test_that("we can differentiate expressions with functions", {
   f <- function(x) -sin(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(-cos(x)))
+  expect_equal(body(df), quote(-sin_deriv(x)))
 
   f <- function(x) -cos(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(sin(x)))
+  expect_equal(body(df), quote(cos_deriv(x)))
 
   f <- function(x) -exp(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(-exp(x)))
+  expect_equal(body(df), quote(-exp_deriv(x)))
 })
 
 test_that("we can differentiate general functions with the chain rule", {
