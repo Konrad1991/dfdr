@@ -10,11 +10,15 @@
 #' @param use_names Should the gradient add variable names to the output of the function?
 #' @return  A function that computes the gradient of f at any point.
 #' @export
-gradient <- function(f, vars = NULL, use_names = FALSE) {
-  if (is.null(vars)) {
-    vars <- names(formals(f))
+gradient <- function(f, use_names, ...) {
+  args <- rlang::ensyms(...) 
+  vars <- purrr::map(args, rlang::as_string)
+  stopifnot("Variable names for which gradients should be calculated are missing"=length(vars)>0)
+  derivatives <- list()
+  for(i in vars) {
+    k <- rlang::enexpr(i)
+    derivatives <- c(derivatives, body(d(f, !!k)))
   }
-  derivatives <- vars |> purrr::map(\(v) body(d(f, v)))
   if (use_names) {
     derivatives <- derivatives |> setNames(vars)
   }
@@ -36,24 +40,27 @@ gradient <- function(f, vars = NULL, use_names = FALSE) {
 #' @param use_names Should the gradient add variable names to the output of the function?
 #' @return  A function that computes the gradient of f at any point.
 #' @export
-hessian <- function(f, vars = NULL, use_names = FALSE) {
-  if (is.null(vars)) {
-    vars <- names(formals(f))
-  }
-  first_derivatives <- Map(function(v) d(f, v), vars)
+hessian <- function(f, use_names = FALSE, ...) {
+  args <- rlang::ensyms(...) 
+  vars <- purrr::map(args, rlang::as_string)
+  stopifnot("Variable names for which gradients should be calculated are missing"=length(vars)>0)
+  
+  first_derivatives <- Map(function(v) d(f, !!rlang::enexpr(v)), vars)
+  names(first_derivatives) <- vars
   second_derivatives <- first_derivatives # just an easy hack to get the right length with right names
   for (var in vars) {
     df <- first_derivatives[[var]]
-    second_derivatives[[var]] <- Map(function(v) d(df, v), vars)
+    second_derivatives[[var]] <- Map(function(v) d(df, !!rlang::enexpr(v)), vars)
+    names(second_derivatives[[var]]) <- vars
   }
   function(...) {
     H <- matrix(nrow = length(vars), ncol = length(vars))
-    if (use_names) rownames(H) <- colnames(H) <- vars
+    if (use_names) rownames(H) <- colnames(H) <- as.character(unlist(vars))
     for (i in seq_along(vars)) {
       v1 <- vars[i]
       for (j in seq_along(vars)) {
         v2 <- vars[j]
-        df <- second_derivatives[[v1]][[v2]]
+        df <- second_derivatives[[unlist(v1)]][[unlist(v2)]]
         H[i, j] <- df(...)
       }
     }

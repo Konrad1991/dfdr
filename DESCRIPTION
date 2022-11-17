@@ -10,7 +10,8 @@ Encoding: UTF-8
 LazyData: true
 Imports:
   purrr,
-  rlang
+  rlang,
+  R6
 Suggests:
   testthat,
   covr

@@ -1,3 +1,9 @@
+# check valid input for `[`
+check_bracket <- function(ex) {
+  if(length(ex) == 3) return(ex[[3]]%%1==0)
+  if(length(ex) == 4) return( (ex[[3]]%%1==0) && (ex[[4]]%%1==0) )
+}
+
 # Lifts a function so it will propagate NULL and otherwise do its thing
 lift <- function(f) {
   function(x, ...) if (rlang::is_null(x)) x else f(x, ...)
@@ -11,9 +17,9 @@ lift <- function(f) {
 #' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
 #' @export
 d <- function(f, x, derivs = NULL) {
-
+  #trash <- x # just a trick that enexpr of x works correctly for gradient
+  x <- rlang::enexpr(x)
   fl <- init_fct_list()
-
   if(!is.null(derivs)) {
     fd <- derivs@funs
     for(i in seq_along(fd)) {
@@ -56,9 +62,21 @@ diff_vector_out <- function(expr, x, fl) {
 }
 
 diff_expr <- lift(function(expr, x, fl) {
+  if(is.call(expr)) {
+    if(as.name("[") == expr[[1]]) {
+      stopifnot("Only integers in [] allowed"=check_bracket(expr))
+      if(expr == x) {
+        return(quote(1))
+      } else {
+        return(quote(0))
+      }
+      
+    }
+  }
+
   expr |> purrr::when(
     is.numeric(.)              ~ quote(0),
-    is.name(.) && . == x       ~ quote(1),
+    is.name(.) && . == x       ~ quote(1), 
     is.name(.)                 ~ quote(0),
     is.call(.)                 ~ diff_call(expr, x, fl),
     ~ stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
@@ -133,28 +151,10 @@ diff_built_in_function_call <- lift(function(expr, x, fl) {
   } else {
     entire_deriv <- paste(entire_deriv)
   }
-  str2lang(entire_deriv)
-})
-
-diff_general_function_call <- lift(function(expr, x, fl) {
-  function_name <- call_name(expr)
-  if (!is.name(function_name))
-    stop(paste0("Unexpected call ", deparse(expr)))
-
-  print(function_name)
-  func <- get(function_name, fl)
-  full_call <- rlang::call_match(expr, func)
-  variables <- names(full_call)
-
-  arguments <- vector("list", length(full_call) - 1)
-  for (i in seq_along(arguments)) {
-    var <- variables[i + 1]
-    dfdz <- full_call
-    dfdz[[1]] <- bquote(d(.(function_name), .(var)))
-    dzdx <- diff_expr(expr[[i + 1]], x, fl)
-    arguments[[i]] <- bquote(.(dfdz) * .(dzdx))
+  if(identical(entire_deriv, character(0))) {
+    return(str2lang("0"))
   }
-  as.call(c(list(sum), arguments))
+  str2lang(entire_deriv)
 })
 
 diff_parens <- function(expr, x, fl) {
@@ -179,8 +179,8 @@ diff_call <- lift(function(expr, x, fl) {
       . == "(" ~ diff_parens(expr, x, fl),
       (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl),
       . == "c" ~ diff_vector_out(expr, x, fl),
-      ~ diff_general_function_call(expr, x, fl)
+      ~ stop(paste("The function", ., "is not supported"))
     ),
-    ~ diff_general_function_call(expr, x, fl)
+    ~ stop(paste("The function", ., "is not supported"))
   )
 })
