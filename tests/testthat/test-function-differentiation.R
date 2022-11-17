@@ -18,7 +18,7 @@ test_that("we can differentiate expressions with functions", {
 
   f <- function(x) -cos(x)
   df <- d(f, "x")
-  expect_equal(body(df), quote(cos_deriv(x)))
+  expect_equal(body(df), quote(-cos_deriv(x)))
 
   f <- function(x) -exp(x)
   df <- d(f, "x")
@@ -26,15 +26,23 @@ test_that("we can differentiate expressions with functions", {
 })
 
 test_that("we can differentiate general functions with the chain rule", {
-  f <- function(x, y) x^2 * y
-  g <- function(z) f(2*z, z^2)
+  f1 <- function(x) x^2
+  f2 <- function(y) y
+  g <- function(z) f1(2*z)*f2(z^2)
   h <- function(z) 4*z^4
 
   zs <- seq(1,100,5)
   expect_equal(g(zs), h(zs))
 
-  dg <- Vectorize(d(g, "z"))
-  dh <- d(h, "z")
+  l <- dfdr:::fcts()
+  f1_deriv <- function(x) 2*x
+  f2_deriv <- function(y) 1
+  l <- dfdr:::add_fct(l, "f1", f1_deriv)
+  l <- dfdr:::add_fct(l, "f2", f2_deriv)
+  df <- dfdr::d(g, z, l)
+  
+  dg <- df #Vectorize(d(g, z, l))
+  dh <- d(h, z)
   expect_equal(dg(zs), dh(zs))
 })
 
