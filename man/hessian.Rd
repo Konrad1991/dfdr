@@ -4,16 +4,16 @@
 \alias{hessian}
 \title{Compute the Hessian-function of a function.}
 \usage{
-hessian(f, vars = NULL, use_names = FALSE)
+hessian(f, use_names = FALSE, ...)
 }
 \arguments{
 \item{f}{A function}
 
+\item{use_names}{Should the gradient add variable names to the output of the function?}
+
 \item{vars}{The variables to compute the derivatives of. If NULL
 the gradient will be computed for all formal arguments
 of f.}
-
-\item{use_names}{Should the gradient add variable names to the output of the function?}
 }
 \value{
 A function that computes the gradient of f at any point.

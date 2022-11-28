@@ -4,16 +4,16 @@
 \alias{gradient}
 \title{Compute the gradient-function of a function.}
 \usage{
-gradient(f, vars = NULL, use_names = FALSE)
+gradient(f, use_names, ...)
 }
 \arguments{
 \item{f}{A function}
 
+\item{use_names}{Should the gradient add variable names to the output of the function?}
+
 \item{vars}{The variables to compute the derivatives of. If NULL
 the gradient will be computed for all formal arguments
 of f.}
-
-\item{use_names}{Should the gradient add variable names to the output of the function?}
 }
 \value{
 A function that computes the gradient of f at any point.
