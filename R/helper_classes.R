@@ -1,3 +1,33 @@
+Unfoldif <- R6::R6Class(
+  
+  "Unfoldif",
+  
+  public = list(
+    
+    inif = FALSE,
+    ret = NULL,
+    
+    unfold = function(code) {
+      if(!is.call(code)) {
+        return(code)
+      }
+      fct = code[[1]]
+
+      if(fct == "if" || fct == "{") {
+        code <- as.list(code)
+        self$inif <- TRUE
+      } else if(fct == "<-" && self$inif) {
+        self$ret <- c(self$ret, code)
+      }
+      
+      code <- as.call(code)
+      code = as.list(code)
+      lapply(code, self$unfold)  
+    }
+    
+  ) # end public list
+)
+
 Vars <- R6::R6Class(
   
   "Vars",

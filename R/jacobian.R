@@ -102,6 +102,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
   
   to_be_replaced <- NULL
   counter <- 1
+  to_be_differentiated <- NULL
   # extract body and replacing
   # ============================================================================
   body <- body_of_fct(f)
@@ -141,29 +142,25 @@ jacobian <- function(f, y, x, derivs = NULL) {
     
     # check if block
     if(in_if) {
-      if(length(ls) != 0) {
-        for(j in seq_along(1:length(ls))) {
-          tocheck <- ls[[j]]
-          if(length(as.list(ls[[j]])) > 1) {
-            tocheck <- as.list(ls[[j]])[[2]]
-          }
-          if(tocheck == x) stop("Found independent variable on left hand side in if block. This is not supported.")
-        }
-      } 
-    }
-    if(in_if) {
       if(length(rs) != 0) {
-        for(j in seq_along(1:length(rs))) {
-          tocheck <- ls[[j]]
-          if(length(as.list(rs[[j]])) > 1) {
-            tocheck <- as.list(rs[[j]])[[2]]
+        for(j in seq_along(1:length(ls))) {
+          tocheck_left <- rbfv(ls[[j]])
+          tocheck_right <- rbfv(rs[[j]])
+          print(tocheck_left)
+          print(tocheck_right)
+          cat("\n\n")
+          if(tocheck_left == x) stop("Found independent variable on left hand side in if block. This is not supported.")
+          if(tocheck_left == y) break
+          if( (tocheck_left != y) && ((tocheck_right == x) || (tocheck_right == y)) ) {
+            #print(body[[i]])
+            print(tocheck_left == y)
+            #print(tocheck_left)
+            stop("Found (in)-dependent variable on right hand side in if block. This is not supported.")
           }
-          if(tocheck == x) stop("Found independent variable on right hand side in if block. This is not supported.")
-          if(tocheck == y) stop("Found dependent variable on right hand side in if block. This is not supported.")
         }
-      } 
+      }
     }
-    
+
     # find variables which have to be replaced in the following lines
     if(!in_if) {
       for(j in seq_along(1:length(rs))) {
@@ -178,6 +175,12 @@ jacobian <- function(f, y, x, derivs = NULL) {
     }
     
     # find y at left side
+    if(!in_if) {
+      to_be_differentiated <- c(index = i)  
+    } else if(in_if) {
+      #print(as.list(body[[i]]))
+    }
+    
     
   } # end loop over body
   
