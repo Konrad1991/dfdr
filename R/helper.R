@@ -1,33 +1,77 @@
-Unfoldif <- R6::R6Class(
-  
-  "Unfoldif",
-  
-  public = list(
-    
-    inif = FALSE,
-    ret = NULL,
-    
-    unfold = function(code) {
-      if(!is.call(code)) {
-        return(code)
-      }
-      fct = code[[1]]
+# helper functions
+# ============================================================================
+body_of_fct <- function(f) {
+  brackets <- body(f)[[1]]
+  body <- NULL
+  if(brackets != as.name("{")) {
+    body <- body(f)  
+  } else {
+    l <- length(body(f))
+    body <- body(f)[2:l]
+  }
+  return(body)
+}
 
-      if(fct == "if" || fct == "{") {
-        code <- as.list(code)
-        self$inif <- TRUE
-      } else if(fct == "<-" && self$inif) {
-        self$ret <- c(self$ret, code)
-      }
-      
-      code <- as.call(code)
-      code = as.list(code)
-      lapply(code, self$unfold)  
+replace_all <- function(b, to_replace, replace_with) {
+  r <- Replace$new()
+  r$set_replace(to_replace, replace_with)
+  res <- c()
+  for(i in seq_along(1:length(b))) {
+    b_i <- r$replace(b[[i]])
+    b_i_call <- r$get_code(b_i)
+    res <- c(res, b_i_call)
+  }
+  res
+}
+
+check <- function(a, b, c) {
+  a == b || a == c
+}
+
+#remove_bracket_from_var
+rbfv <- function(var) {
+  ret <- var
+  if(length(as.list(var)) > 1) {
+    ret <- as.list(var)[[2]]
+  }
+  ret
+}
+
+# get rs from one line
+grs <- function(line) {
+  if(length(line) >= 3) {
+    return(line[[3]])
+  } else {
+    stop("Something went wrong.")
+  }
+}
+
+# differentiate codeline
+diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
+  tocheck <- rbfv(leftside)
+  if(tocheck != dep_var) return(NULL)
+  fct <- function() {stop("something went wrong")}
+  body(fct, envir = environment(fct)) <- codeline
+  ret <- lapply(indep_vars, function(inp) {
+    df <- d(fct, !!inp, fl)
+    cl <- call("=", leftside, codeline)
+    
+    if(length(leftside) == 1 && length(inp)) {
+      jac_mat <- paste0(jac_mat, "(1, 1)")
+    } else if(length(leftside) >= 3 && length(inp) >= 3) {
+      fct_index <- leftside[[3]]
+      indep_index <- inp[[3]]
+      jac_mat <- paste0(jac_mat, "[", indep_index, ",", fct_index, "]")
     }
     
-  ) # end public list
-)
+    deriv <- call("=", str2lang(jac_mat), body(df))
+    return(deriv)
+  })
+  
+}
 
+# helper classes
+# ==============================================================================
 Vars <- R6::R6Class(
   
   "Vars",
@@ -204,4 +248,60 @@ Replace <- R6::R6Class(
     
   ) # end public
   
+)
+
+
+Unfoldif <- R6::R6Class(
+  
+  "Unfoldif",
+  
+  public = list(
+    
+    inif = FALSE,
+    diff = NULL,
+    fl = NULL,
+    indep = NULL,
+    dep = NULL,
+    jac_mat = NULL,
+    
+    initialize = function(diff, fl, indep, dep, jac_mat) {
+      self$diff = diff
+      self$fl = fl
+      self$indep = indep
+      self$dep = dep
+      self$jac_mat = jac_mat
+    },
+
+    get_code = function(code) {
+      out <- purrr::map_if(code, is.list, self$get_code)
+      out <- as.call(out) 
+      return(out)
+    },
+    
+    unfold = function(code) {
+
+      if(!is.call(code)) {
+        return(code)
+      }
+      fct = code[[1]]
+      
+      if(fct == "if" || fct == "{") {
+        code <- as.list(code)
+        self$inif <- TRUE
+      } else if( ( (fct == "<-") || (fct == "=") ) && self$inif) {
+        deriv_l <- self$diff(code[[2]], code[[3]], self$indep, self$dep, self$fl, self$jac_mat)
+        deriv_l <- sapply(deriv_l, function(x) {
+          temp <- deparse(x)
+          paste(temp, ";\n")
+        })
+        code <- paste(deparse(code), ";\n")
+        code <- paste(code, deriv_l)
+        return(code)
+      }
+      code <- as.call(code)
+      code = as.list(code)
+      lapply(code, self$unfold)  
+    }
+    
+  ) # end public list
 )

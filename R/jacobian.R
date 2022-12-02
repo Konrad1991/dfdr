@@ -9,6 +9,14 @@
 #' @param use_names Should the gradient add variable names to the output of the function?
 #' @return  A function that computes the jacboian-matrix of f at any point.
 #' @export
+#' @details   
+#' In main scope \cr
+#' y[1] = ...  : allowed \cr
+#' x[1] = 1    : allowed \cr
+#' a    = x[1] : replace it \cr
+#' b    = y[1] : replace it \cr
+#' In if/else if/else block \cr
+#' y[1] = ...  : only this is allowed! \cr
 #' @examples
 #' f <- function(t, x, p) {
 #' a <- p[1]
@@ -41,54 +49,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
   x <- rlang::ensym(x) 
   x <- rlang::as_string(x)
 
-  # helper functions
-  # ============================================================================
-  body_of_fct <- function(f) {
-    brackets <- body(f)[[1]]
-    body <- NULL
-    if(brackets != as.name("{")) {
-      body <- body(f)  
-    } else {
-      l <- length(body(f))
-      body <- body(f)[2:l]
-    }
-    return(body)
-  }
-  
-  replace_all <- function(b, to_replace, replace_with) {
-    r <- Replace$new()
-    r$set_replace(to_replace, replace_with)
-    res <- c()
-    for(i in seq_along(1:length(b))) {
-      b_i <- r$replace(b[[i]])
-      b_i_call <- r$get_code(b_i)
-      res <- c(res, b_i_call)
-    }
-    res
-  }
-  
-  check <- function(a, b, c) {
-    a == b || a == c
-  }
-  
-  #remove_bracket_from_var
-  rbfv <- function(var) {
-    ret <- var
-    if(length(as.list(var)) > 1) {
-      ret <- as.list(var)[[2]]
-    }
-    ret
-  }
-  
-  # get rs from one line
-  grs <- function(line) {
-    if(length(line) >= 3) {
-      return(line[[3]])
-    } else {
-      stop("Something went wrong.")
-    }
-  }
-  
   # create function list
   # ============================================================================
   fl <- dfdr:::init_fct_list()
@@ -100,33 +60,15 @@ jacobian <- function(f, y, x, derivs = NULL) {
   }
   fct_list <- get_names(fl)
   
-  to_be_replaced <- NULL
-  counter <- 1
-  to_be_differentiated <- NULL
   # extract body and replacing
   # ============================================================================
   body <- body_of_fct(f)
-
-  # get variables
-  # Examples:
-  # dependent variable = y
-  # independent variable = x
-  # In main scope
-  # y[1] = ...  : allowed
-  # x[1] = 1    : this is actually allowed.
-  #               However, it does not make sense, at least in the context of ode-systems.
-  #               Throw either warning or error
-  # a    = x[1] : the variable 'a' has to be replaced with x[1] in every following line (also in the if/else if/else blocks).
-  # b    = y[1] : the variable 'b' has to be replaced with x[1] in every following line (also in the if/else if/else blocks).
-  #
-  # In if/else if/else block
-  # y[1] = ...  : allowed
-  # x[1] = 1    : not allowed.
-  # a    = x[1] : not allowed
-  # b    = y[1] : not allowed
-
+  to_be_replaced <- NULL
+  counter <- 1
   to_replace <- NULL
   to_replace_index <- NULL
+  all_vars_left <- NULL 
+  all_vars_right <- NULL
   
   for(i in seq_along(1:length(body))) {
     in_if <- FALSE
@@ -138,29 +80,25 @@ jacobian <- function(f, y, x, derivs = NULL) {
     if(body[[i]][[1]] == as.name("return")) next
     
     ls <- v$get_ls() 
+    all_vars_left <- c(all_vars_left, ls)
     rs <- v$get_rs() 
+    independet_at_rs <- sapply(rs, function(y) {
+      tocheck <- rbfv(y)
+      if(tocheck == x) {
+        return(y)
+      }
+    })
+    independet_at_rs[sapply(independet_at_rs, is.null)] <- NULL
+    all_vars_right <- c(all_vars_right, independet_at_rs)
     
     # check if block
     if(in_if) {
-      if(length(rs) != 0) {
-        for(j in seq_along(1:length(ls))) {
-          tocheck_left <- rbfv(ls[[j]])
-          tocheck_right <- rbfv(rs[[j]])
-          print(tocheck_left)
-          print(tocheck_right)
-          cat("\n\n")
-          if(tocheck_left == x) stop("Found independent variable on left hand side in if block. This is not supported.")
-          if(tocheck_left == y) break
-          if( (tocheck_left != y) && ((tocheck_right == x) || (tocheck_right == y)) ) {
-            #print(body[[i]])
-            print(tocheck_left == y)
-            #print(tocheck_left)
-            stop("Found (in)-dependent variable on right hand side in if block. This is not supported.")
-          }
-        }
+      for(j in seq_along(1:length(ls))) {
+        tocheck <- rbfv(ls[[j]])
+        if(tocheck != y) stop("Only the dependent variable (Input argument = y) is allowed at the left side")
       }
     }
-
+    
     # find variables which have to be replaced in the following lines
     if(!in_if) {
       for(j in seq_along(1:length(rs))) {
@@ -173,14 +111,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
         } 
       }
     }
-    
-    # find y at left side
-    if(!in_if) {
-      to_be_differentiated <- c(index = i)  
-    } else if(in_if) {
-      #print(as.list(body[[i]]))
-    }
-    
     
   } # end loop over body
   
@@ -197,12 +127,42 @@ jacobian <- function(f, y, x, derivs = NULL) {
     body[[index]] <- NULL
   }
   
-  print(body)
+  # jac matrix creation
+  # ============================================================================
+  all_vars_left <- as.character(c(all_vars_left, lapply(formalArgs(f), str2lang)))
+  jac_mat <- "jac_mat"
+  while(jac_mat %in% all_vars_left) {
+    jac_mat <- paste0(jac_mat, "1")
+  }
+  
+  # find all independent variables for which 'd' has to be called
+  # ============================================================================
+  to_diff <- unique(all_vars_right)
   
   # call dfdr::d for each term at right hand side
   # ============================================================================
+  body_new <- list()
+  for(i in seq_along(1:length(body))) {
+    in_if <- FALSE
+    if(body[[i]][[1]] == as.name("if")) {
+      in_if <- TRUE
+    }
+    if(body[[i]][[1]] == as.name("return")) next
+    
+    codeline <- NULL
+    
+    if(in_if) {
+      u <- Unfoldif$new(diff, fl, to_diff, y, jac_mat)
+      ast <- u$unfold(body[[i]])
+      codeline <- u$get_code(ast)
+      #body_new[[i]] <- codeline
+    } else {
+      codeline <- body[[i]]
+      deriv <- diff(codeline[[2]], codeline[[3]], to_diff, y, fl, jac_mat)
+      body_new[[i]] <- c(codeline, unlist(deriv))
+    }
+  }
   
-  # build all parts together
-  # ============================================================================
+  print(body_new)
 }
 

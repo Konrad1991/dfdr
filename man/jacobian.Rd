@@ -22,6 +22,15 @@ A function that computes the jacboian-matrix of f at any point.
 Creates a function that computes the jacobian-matrix of a function with respect to one parameter
 and return a matrix of these.
 }
+\details{
+In main scope \cr
+y[1] = ...  : allowed \cr
+x[1] = 1    : allowed \cr
+a    = x[1] : replace it \cr
+b    = y[1] : replace it \cr
+In if/else if/else block \cr
+y[1] = ...  : only this is allowed! \cr
+}
 \examples{
 f <- function(t, x, p) {
 a <- p[1]
@@ -32,15 +41,16 @@ a <- x[1]
 if(t > 8) {
   a[1] <- 1
   b <- 6
-  #x[1] <- 3
+  #x[1] <- 3 # not allowed
   y[1] <- 3
-  #a <- y[2]
-  #a <- x[2]
+  #a <- y[2] # not allowed
+  #a <- x[2] # not allowed
 }
 
 y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
 y[2] <- x[1]*x[2]*c - x[2]*d
 return(y)
 }
-dfdr:::jacobian(f, "y", "x")
+library(dfdr)
+jacobian(f, y, x)
 }
