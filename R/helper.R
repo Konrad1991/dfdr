@@ -290,12 +290,13 @@ Unfoldif <- R6::R6Class(
         self$inif <- TRUE
       } else if( ( (fct == "<-") || (fct == "=") ) && self$inif) {
         deriv_l <- self$diff(code[[2]], code[[3]], self$indep, self$dep, self$fl, self$jac_mat)
-        deriv_l <- sapply(deriv_l, function(x) {
-          temp <- deparse(x)
-          paste(temp, ";\n")
-        })
-        code <- paste(deparse(code), ";\n")
-        code <- paste(code, deriv_l)
+        #deriv_l <- sapply(deriv_l, function(x) {
+        #  temp <- deparse(x)
+        #  paste(temp, ";\n")
+        #})
+        #code <- paste(deparse(code), ";\n")
+        #code <- paste(code, deriv_l)
+        code <- deriv_l
         return(code)
       }
       code <- as.call(code)

@@ -156,6 +156,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
       ast <- u$unfold(body[[i]])
       codeline <- u$get_code(ast)
       #body_new[[i]] <- codeline
+      print(codeline)
     } else {
       codeline <- body[[i]]
       deriv <- diff(codeline[[2]], codeline[[3]], to_diff, y, fl, jac_mat)
@@ -163,6 +164,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
     }
   }
   
-  print(body_new)
+  #print(body_new)
 }
 
