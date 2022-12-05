@@ -175,10 +175,8 @@ jacobian <- function(f, y, x, derivs = NULL) {
     }
   }
   body_new[sapply(body_new, is.null)] <- NULL
-  body_new <- paste(body_new, collapse = ";\n")
-  body_new <- parse( text = body_new)
-  
-  #body(f) <- body_new[1]
+  body_new <- as.call(c(as.symbol("{"), body_new))
+  body(f) <- body_new
   
   return(f)
 }
