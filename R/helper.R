@@ -250,59 +250,71 @@ Replace <- R6::R6Class(
   
 )
 
-
-Unfoldif <- R6::R6Class(
+Unfold <- R6::R6Class(
   
-  "Unfoldif",
+  "Unfold",
   
   public = list(
     
-    inif = FALSE,
     diff = NULL,
     fl = NULL,
-    indep = NULL,
-    dep = NULL,
+    to_diff = NULL,
+    y = NULL,
     jac_mat = NULL,
     
-    initialize = function(diff, fl, indep, dep, jac_mat) {
-      self$diff = diff
-      self$fl = fl
-      self$indep = indep
-      self$dep = dep
-      self$jac_mat = jac_mat
+    initialize = function(diff, fl, to_diff, y, jac_mat) {
+      self$diff <- diff
+      self$fl <- fl
+      self$to_diff <- to_diff
+      self$y <- y
+      self$jac_mat <- jac_mat
     },
-
+    
+    rb = function(code) {
+      results <- list()
+      counter <- 1
+      for(i in seq_along(1:length(code))) {
+        fs <- as.character(code[[i]])
+        if(fs[[1]] == "<-" || fs[[1]] == "=") {
+          ls <- code[[i]][[2]]
+          codeline  <- code[[i]][[3]]
+          df <- diff(ls, codeline, self$to_diff, self$y, self$fl, self$jac_mat)
+          results[[counter]] <- code[[i]]
+          counter <- counter + 1
+          for(j in seq_along(1:length(df))) {
+            results[[counter]] <- df[[j]]
+            counter <- counter + 1
+          }
+        } else {
+          results[[counter]] <- code[[i]]
+          counter <- counter + 1
+        }
+      }
+      return(results)
+    },
+    
     get_code = function(code) {
       out <- purrr::map_if(code, is.list, self$get_code)
       out <- as.call(out) 
       return(out)
     },
     
-    unfold = function(code) {
-
+    uf = function(code) {
+      
       if(!is.call(code)) {
         return(code)
       }
-      fct = code[[1]]
       
-      if(fct == "if" || fct == "{") {
-        code <- as.list(code)
-        self$inif <- TRUE
-      } else if( ( (fct == "<-") || (fct == "=") ) && self$inif) {
-        deriv_l <- self$diff(code[[2]], code[[3]], self$indep, self$dep, self$fl, self$jac_mat)
-        #deriv_l <- sapply(deriv_l, function(x) {
-        #  temp <- deparse(x)
-        #  paste(temp, ";\n")
-        #})
-        #code <- paste(deparse(code), ";\n")
-        #code <- paste(code, deriv_l)
-        code <- deriv_l
-        return(code)
+      if(code[[1]] == "{") {
+        code  <- self$rb(code)
       }
+      
       code <- as.call(code)
       code = as.list(code)
-      lapply(code, self$unfold)  
+      lapply(code, self$uf)  
+      
     }
     
   ) # end public list
+  
 )

@@ -142,28 +142,44 @@ jacobian <- function(f, y, x, derivs = NULL) {
   # call dfdr::d for each term at right hand side
   # ============================================================================
   body_new <- list()
+  counter <- 1
   for(i in seq_along(1:length(body))) {
     in_if <- FALSE
     if(body[[i]][[1]] == as.name("if")) {
       in_if <- TRUE
     }
-    if(body[[i]][[1]] == as.name("return")) next
+    if(body[[i]][[1]] == as.name("return")) {
+      body_new[[counter]] <- bquote(return(.(str2lang(jac_mat)) ))
+      counter <- counter + 1
+      next
+    }
     
     codeline <- NULL
     
     if(in_if) {
-      u <- Unfoldif$new(diff, fl, to_diff, y, jac_mat)
-      ast <- u$unfold(body[[i]])
+      u <- Unfold$new(diff, fl, to_diff, y, jac_mat)
+      ast <- u$uf(body[[i]])
       codeline <- u$get_code(ast)
-      #body_new[[i]] <- codeline
-      print(codeline)
+      body_new[[counter]] <- codeline
+      counter <- counter + 1
     } else {
       codeline <- body[[i]]
       deriv <- diff(codeline[[2]], codeline[[3]], to_diff, y, fl, jac_mat)
-      body_new[[i]] <- c(codeline, unlist(deriv))
+      body_new[[counter]] <- codeline
+      counter <- counter + 1
+      for(j in seq_along(1:length(deriv))) {
+        body_new[[counter]] <- deriv[[j]]
+        counter <- counter + 1
+      }
+      
     }
   }
+  body_new[sapply(body_new, is.null)] <- NULL
+  body_new <- paste(body_new, collapse = ";\n")
+  body_new <- parse( text = body_new)
   
-  #print(body_new)
+  #body(f) <- body_new[1]
+  
+  return(f)
 }
 
