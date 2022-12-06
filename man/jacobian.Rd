@@ -33,23 +33,9 @@ y[1] = ...  : only this is allowed! \cr
 }
 \examples{
 f <- function(t, x, p) {
-a <- p[1]
-b <- p[2]
-c <- p[3]
-d <- p[4]
-a <- x[1]
-if(t > 8) {
-  a[1] <- 1
-  b <- 6
-  #x[1] <- 3 # not allowed
-  y[1] <- 3
-  #a <- y[2] # not allowed
-  #a <- x[2] # not allowed
-}
-
-y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
-y[2] <- x[1]*x[2]*c - x[2]*d
-return(y)
+    y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
+    y[2] <- x[1]*x[2]*c - x[2]*d
+    return(y)
 }
 library(dfdr)
 jacobian(f, y, x)

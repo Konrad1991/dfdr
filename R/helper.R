@@ -12,18 +12,6 @@ body_of_fct <- function(f) {
   return(body)
 }
 
-replace_all <- function(b, to_replace, replace_with) {
-  r <- Replace$new()
-  r$set_replace(to_replace, replace_with)
-  res <- c()
-  for(i in seq_along(1:length(b))) {
-    b_i <- r$replace(b[[i]])
-    b_i_call <- r$get_code(b_i)
-    res <- c(res, b_i_call)
-  }
-  res
-}
-
 check <- function(a, b, c) {
   a == b || a == c
 }
@@ -197,34 +185,19 @@ Vars <- R6::R6Class(
   )   # end public list                 
 )
 
-
-
-
-
-Replace <- R6::R6Class(
-  
-  "Replace",
+ReplaceIt <- R6::R6Class("ReplaceIt",
   
   public = list(
-    
-    initialize = function(){},
-    
-    get_code = function(code) {
-      out <- purrr::map_if(code, is.list, self$get_code)
-      out <- as.call(out)
-      return(out)
-    },
-    
-    # replacing
+        
     to_replace = NULL,
     replace_with = NULL,
-    
-    set_replace = function(to_replace, replace_with) {
+
+    initialize = function(to_replace, replace_with) {
       self$to_replace = to_replace
       self$replace_with = replace_with
     },
     
-    replace = function(code) {
+    replaceit = function(code) {
       if(!is.call(code)) {
         return(code)
       }
@@ -234,7 +207,8 @@ Replace <- R6::R6Class(
           if(is.null(self$to_replace)) return(x)
           
           if(deparse(x) == self$to_replace) {
-            x = str2lang(paste0("(", self$replace_with, ")"))
+            x = str2lang(bquote(.(self$replace_with)))
+              #str2lang(paste0("(", self$replace_with, ")"))
           }
           return(x)
         } else {
@@ -243,12 +217,33 @@ Replace <- R6::R6Class(
       })
       code <- as.call(code)
       code = as.list(code)
-      lapply(code, self$replace)  
+      lapply(code, self$replaceit)  
+    },
+
+    get_code = function(code) {
+      out <- purrr::map_if(code, is.list, self$get_code)
+      out <- as.call(out)
+      return(out)
     }
     
   ) # end public
   
 )
+
+
+
+
+
+replace_all <- function(b, to_replace, replace_with) {
+  r <- ReplaceIt$new(to_replace, replace_with)
+  res <- c()
+  for(i in seq_along(1:length(b))) {
+    b_i <- r$replaceit(b[[i]])
+    b_i_call <- r$get_code(b_i)
+    res <- c(res, b_i_call)
+  }
+  res
+}
 
 Unfold <- R6::R6Class(
   

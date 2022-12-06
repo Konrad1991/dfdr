@@ -19,23 +19,9 @@
 #' y[1] = ...  : only this is allowed! \cr
 #' @examples
 #' f <- function(t, x, p) {
-#' a <- p[1]
-#' b <- p[2]
-#' c <- p[3]
-#' d <- p[4]
-#' a <- x[1]
-#' if(t > 8) {
-#'   a[1] <- 1
-#'   b <- 6
-#'   #x[1] <- 3 # not allowed
-#'   y[1] <- 3
-#'   #a <- y[2] # not allowed
-#'   #a <- x[2] # not allowed
-#' }
-#' 
-#' y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
-#' y[2] <- x[1]*x[2]*c - x[2]*d
-#' return(y)
+#'     y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
+#'     y[2] <- x[1]*x[2]*c - x[2]*d
+#'     return(y)
 #' }
 #' library(dfdr)
 #' jacobian(f, y, x)
@@ -69,11 +55,14 @@ jacobian <- function(f, y, x, derivs = NULL) {
   to_replace_index <- NULL
   all_vars_left <- NULL 
   all_vars_right <- NULL
+  body_new <- as.list(body)
+  counter_bn <- 1
   
   for(i in seq_along(1:length(body))) {
     in_if <- FALSE
     v <- Vars$new(fct_list)
     ast <- v$find_vars(body[[i]])
+
     if(body[[i]][[1]] == as.name("if")) {
       in_if <- TRUE
     }
@@ -81,7 +70,9 @@ jacobian <- function(f, y, x, derivs = NULL) {
     
     ls <- v$get_ls() 
     all_vars_left <- c(all_vars_left, ls)
-    rs <- v$get_rs() 
+    rs <- v$get_rs()
+
+    if(identical(rs, list())) next
     independet_at_rs <- sapply(rs, function(y) {
       tocheck <- rbfv(y)
       if(tocheck == x) {
@@ -90,14 +81,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
     })
     independet_at_rs[sapply(independet_at_rs, is.null)] <- NULL
     all_vars_right <- c(all_vars_right, independet_at_rs)
-    
-    # check if block
-    if(in_if) {
-      for(j in seq_along(1:length(ls))) {
-        tocheck <- rbfv(ls[[j]])
-        if(tocheck != y) stop("Only the dependent variable (Input argument = y) is allowed at the left side")
-      }
-    }
     
     # find variables which have to be replaced in the following lines
     if(!in_if) {
@@ -112,20 +95,38 @@ jacobian <- function(f, y, x, derivs = NULL) {
       }
     }
     
+    # replace directly
+    index <- to_be_replaced[[counter - 1]][[1]]
+    if(is.null(index)) next else index <- index + 1
+    temp_body <- as.list(body_new)[index:length(body_new)]
+    replace <- to_be_replaced[[counter - 1]][[2]]
+    replace_with <- to_be_replaced[[counter - 1]][[3]]
+    tmp_bd <- replace_all(temp_body, replace, replace_with)  
+    for(k in seq_along(tmp_bd)) {
+      tb <- tmp_bd[[k]]
+      bn <- body_new[[index + k - 1]]
+      if(!identical(tb, bn)) {
+        body_new[[index + k - 1]] <- tb
+      }
+    }
+    
+    
+    # check if block
+    v <- Vars$new(fct_list)
+    ast <- v$find_vars(body_new[[i]])
+    ls <- v$get_ls() 
+    if(in_if) {
+      for(j in seq_along(1:length(ls))) {
+        tocheck <- rbfv(ls[[j]])
+        if(tocheck != y) stop("Only the dependent variable (Input argument = y) is allowed at the left side")
+      }
+    }
+    
+    
+    
   } # end loop over body
-  
-  # replace values
-  # ============================================================================
-  body <- as.list(body)
-  for(i in seq_along(1:length(to_be_replaced))) {
-    if(i == length(body)) break
-    index <- to_be_replaced[[i]][[1]]
-    temp_body <- body[index:length(body)]
-    replace <- to_be_replaced[[i]][[2]]
-    replace_with <- to_be_replaced[[i]][[3]]
-    body[index:length(body)] <- unlist(replace_all(temp_body, replace, replace_with))
-    body[[index]] <- NULL
-  }
+ 
+  body <- body_new
   
   # jac matrix creation
   # ============================================================================
@@ -142,13 +143,22 @@ jacobian <- function(f, y, x, derivs = NULL) {
   # call dfdr::d for each term at right hand side
   # ============================================================================
   body_new <- list()
-  counter <- 1
+  
+  body_new[[1]] <- str2lang( paste(noquote(jac_mat),
+                                   "<- matrix(0, length(",
+                                   noquote(y), "),",
+                                   "length(",
+                                   noquote(y), "))"
+                                   ) )
+  counter <- 2
+  ret_found <- FALSE
   for(i in seq_along(1:length(body))) {
     in_if <- FALSE
     if(body[[i]][[1]] == as.name("if")) {
       in_if <- TRUE
     }
     if(body[[i]][[1]] == as.name("return")) {
+      ret_found <- TRUE
       body_new[[counter]] <- bquote(return(.(str2lang(jac_mat)) ))
       counter <- counter + 1
       next
@@ -174,6 +184,11 @@ jacobian <- function(f, y, x, derivs = NULL) {
       
     }
   }
+  if(ret_found == FALSE) {
+    body_new[[counter]] <- bquote(return(.(str2lang(jac_mat)) ))
+    counter <- counter + 1
+  }
+  
   body_new[sapply(body_new, is.null)] <- NULL
   body_new <- as.call(c(as.symbol("{"), body_new))
   body(f) <- body_new

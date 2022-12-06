@@ -130,6 +130,7 @@ diff_built_in_function_call <- lift(function(expr, x, fl) {
   len <- length(expr)
   args <- sapply(seq_along(2:len), function(x) call_arg(expr, x))
   dy_dx <- sapply(args, function(as) diff_expr(as, x, fl) )
+  if(!is.list(args)) args <- as.list(args)
   outer_deriv <- do.call(call, c(name_deriv, args), quote = TRUE)
   entire_deriv <- NULL
   for(i in seq_along(dy_dx)) {
