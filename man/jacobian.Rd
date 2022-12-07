@@ -2,19 +2,41 @@
 % Please edit documentation in R/jacobian.R
 \name{jacobian}
 \alias{jacobian}
-\title{Compute the gradient-function of a function.}
+\title{Compute jacobian function}
 \usage{
-jacobian(f, var)
+jacobian(f, y, x, derivs = NULL)
 }
 \arguments{
 \item{f}{A function}
 
-\item{var}{The variable to compute the derivative of.}
+\item{y}{The variables to compute the derivatives of (the dependent variable). For example: \eqn{\frac{dy}{dx}}}
+
+\item{x}{The variables to which respect the variables are calcualted (the independent variable). For example: \eqn{\frac{dy}{dx}}}
+
+\item{use_names}{Should the gradient add variable names to the output of the function?}
 }
 \value{
-A function that computes the jacobian of f at any point.
+A function that computes the jacboian-matrix of f at any point.
 }
 \description{
-Creates a function that computes the jacobian matrix of a function with respect to one parameter
-and returns a matrix of these.
+Creates a function that computes the jacobian-matrix of a function with respect to one parameter
+and return a matrix of these.
+}
+\details{
+In main scope \cr
+y[1] = ...  : allowed \cr
+x[1] = 1    : allowed \cr
+a    = x[1] : replace it \cr
+b    = y[1] : replace it \cr
+In if/else if/else block \cr
+y[1] = ...  : only this is allowed! \cr
+}
+\examples{
+f <- function(t, x, p) {
+    y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
+    y[2] <- x[1]*x[2]*c - x[2]*d
+    return(y)
+}
+library(dfdr)
+jacobian(f, y, x)
 }

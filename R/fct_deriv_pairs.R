@@ -161,6 +161,33 @@ log_deriv <- function(x) { 1/x }
 #' @export
 sqrt_deriv <- function(x) { 0.5 * (x)^(-0.5) }
 
+#' Derivative function for c
+#'
+#' @export
+c_deriv <- function(...) {c(...)}
+
+#' Derivative function for vector
+#'
+#' @export
+vector_deriv <- function(x) {vector(length = x)}
+
+#' Derivative function for numeric
+#'
+#' @export
+numeric_deriv <- function(x) {numeric(x)}
+
+#' Derivative function for rep
+#'
+#' @export
+rep_deriv <- function(x, y) {rep(x, y)}
+
+#' Derivative function for matrix
+#'
+#' @export
+matrix_deriv <- function(val = 0, x, y) {matrix(val, x, y)}
+
+
+
 init_fct_list <- function() {
   f <- fcts()
   f <- add_fct(f, "sin",  sin_deriv)
@@ -175,5 +202,10 @@ init_fct_list <- function() {
   f <- add_fct(f, "exp",  exp_deriv)
   f <- add_fct(f, "log",  log_deriv)
   f <- add_fct(f, "sqrt", sqrt_deriv)
+  f <- add_fct(f, "c", c_deriv)
+  f <- add_fct(f, "vector", vector_deriv)
+  f <- add_fct(f, "numeric", numeric_deriv)
+  f <- add_fct(f, "rep", rep_deriv)
+  f <- add_fct(f, "matrix", matrix_deriv)
   return(f)
 }
