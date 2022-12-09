@@ -1,91 +1,92 @@
 context("Jacobian")
 
-# finite differences
-fd <- function(f, x) {
-  delta <- 1e-6
-  jac <- matrix(0, length(x), length(x))
-  for(i in seq_along(1:length(x))) {
-    for(j in seq_along(1:length(x))) {
-      ej <- rep(0, length(x))
-      ej[j] <- 1
-      f1 <- f(x[i] + delta*ej)[i]
-      f2 <- f(x[i] - delta*ej)[i]
-      jac[i, j] <- (f1 - f2)/(2*delta)      
-    }
-  }
-  
-  return(jac)
-}
-
 test_that("we can compute the jacobian of a function", {
   
   # basic case
-  f <- function(x, y) {
-    #y <- numeric(2)
+  f <- function(x) {
+    y <- numeric(2)
     y[1] <- x[1]^2 + sin(4)
     y[2] <- x[2]*7
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
   res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  d <- c(4, 0, 0, 7)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # replacement at left side
   f <- function(x) {
+    y <- numeric(2)
     y1 <- y[1]
     y1 <- x[1]^2
     y[2] <- x[2]*7
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
   res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  d <- c(4, 0, 0, 7)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # error
   f <- function(x) {
-    a <- 1 
+    y <- c(0, 0)
+    a <- 7 
     y1 <- y[1]
     y1 <- x[1]^2
     y[2] <- x[2]*a
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
   res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  d <- c(4, 0, 0, 7)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # error
   # several replacements at left side
   f <- function(x) {
-    a <- 1 
+    y <- rep(0, 2)
+    a <- 8
     y1 <- y[1]
     y1 <- x[1]^2
     y[2] <- x[2]*a
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
   res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  d <- c(4, 0, 0, 8)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # replacements at rs
   f <- function(x) {
+    y <- vector(length = length(x))
     a <- 4*x[1]
     y[1] <- x[1]^2*a
     y[2] <- x[2]*a
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
-  
+  jac <- dfdr::jacobian(f, y, x)
+  x <- c(2, 5)
+  res <- jac(x)
+  d <- c(48, 0, 20, 8)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # replacements at rs & ls
   f <- function(x) {
+    y <- c(0, 0)
     a <- 4*x[1]
     y1 <- y[1]
     y2 <- y[2]
@@ -93,88 +94,83 @@ test_that("we can compute the jacobian of a function", {
     y2 <- x[2]*a
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
   res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  d <- c(48, 0, 20, 8)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # if
-  f <- function(x) {
+  f <- function(x, t) {
+    y <- numeric(2)
     y[1] <- 2*x[1]^3
-    if(y[1] < 3) {
+    if(t < 3) {
       y[2] <- x[2]^2
-    } else if(y[1] < 5) {
+    } else if(t < 5) {
       y[2] <- x[2]^3
     } else {
       y[2] <- x[2]^4
     }
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
-  res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  t <- 4
+  res <- jac(x, t)
+  d <- c(24, 0, 0, 75)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
   # if and replace at ls
-  f <- function(x) {
+  f <- function(x, t) {
+    y <- numeric(2)
     y2 <- y[2]
     y[1] <- 2*x[1]^3
-    if(y[1] < 3) {
+    if(t < 3) {
       y2 <- x[2]^2
-    } else if(y[1] < 5) {
-      y2 <- x[2]^3
+    } else if(t < 5) {
+      y[2] <- x[2]^3
     } else {
-      y2 <- x[2]^4
+      y[2] <- x[2]^4
     }
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
-  res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  t <- 2.5
+  res <- jac(x, t)
+  d <- c(24, 0, 0, 10)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
   
-  # if and replace at rs
-  f <- function(x) {
-    y2 <- y[2]
-    a <- x[1]*sin(x[1])
-    y[1] <- 2*x[1]^3
-    if(y[1] < 3) {
-      y[2] <- x[2]^2*a
-    } else if(y[1] < 5) {
-      y[2] <- x[2]^3 + a
-    } else {
-      y[2] <- x[2]^4 - a
-    }
-    return(y)
-  }
-  jac <- dfdr::jacobian(f, "y", "x")
-  x <- c(2, 5)
-  res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
   
   # if and replace at ls & rs
-  f <- function(x) {
+  f <- function(x, t) {
+    y <- numeric(2)
     y2 <- y[2]
-    a <- x[1]*sin(x[1])
+    a <- x[1]*3
     y[1] <- 2*x[1]^3
-    if(y[1] < 3) {
-      y2 <- x[2]^2*a
-    } else if(y[1] < 5) {
-      y2 <- x[2]^3 + a
+    if(t < 3) {
+      y2 <- x[2]^2
+    } else if(t < 5) {
+      y2 <- x[2]^3
     } else {
-      y2 <- x[2]^4 - a
+      y2 <- x[2]^4*a
     }
     return(y)
   }
-  jac <- dfdr::jacobian(f, "y", "x")
+  jac <- dfdr::jacobian(f, y, x)
   x <- c(2, 5)
-  res <- jac(x)
-  resfd <- fd(f, x)
-  expect_equal(res, resfd)
+  t <- 10
+  res <- jac(x, t)
+  d <- c(24, 0, 1875, 3000)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
 
 })
 

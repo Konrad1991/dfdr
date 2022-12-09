@@ -1,5 +1,34 @@
 # helper functions
 # ============================================================================
+modexpr <- function (x, f, ...)  {
+  recurse <- function(y) {
+    lapply(y, modexpr, f = f, ...)
+  }
+  if (is.atomic(x) || is.name(x)) {
+    f(x, ...)
+  } else if (is.call(x)) {
+    as.call(recurse(x))
+  } else if (is.function(x)) {
+    formals(x) <- modexpr(formals(x), f, ...)
+    body(x) <- modexpr(body(x), f, ...)
+    x
+  } else if (is.pairlist(x)) {
+    as.pairlist(recurse(x))
+  } else if (is.expression(x)) {
+    as.expression(recurse(x))
+  } else if (is.list(x)) {
+    recurse(x)
+  } else {
+    stop("Unknown language class: ", paste(class(x), collapse = "/"), 
+         call. = FALSE)
+  }
+}
+
+substi <- function(inp, replace, replace_with) {
+  if (is.name(inp) && identical(inp, replace)) return(bquote(.(replace_with)))
+  inp
+}
+
 body_of_fct <- function(f) {
   brackets <- body(f)[[1]]
   body <- NULL
@@ -41,17 +70,18 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
   fct <- function() {stop("something went wrong")}
   body(fct, envir = environment(fct)) <- codeline
   ret <- lapply(indep_vars, function(inp) {
-    df <- d(fct, !!inp, fl)
+    const <- new.env()
+    const$const <- FALSE
+    df <- d(fct, !!inp, fl, const)
     cl <- call("=", leftside, codeline)
-    
+    if(const$const) return(NULL)
     if(length(leftside) == 1 && length(inp)) {
-      jac_mat <- paste0(jac_mat, "(1, 1)")
+      jac_mat <- paste0(jac_mat, "[1, 1]")
     } else if(length(leftside) >= 3 && length(inp) >= 3) {
       fct_index <- leftside[[3]]
       indep_index <- inp[[3]]
       jac_mat <- paste0(jac_mat, "[", indep_index, ",", fct_index, "]")
     }
-    
     deriv <- call("=", str2lang(jac_mat), body(df))
     return(deriv)
   })
@@ -68,21 +98,23 @@ Vars <- R6::R6Class(
     
     left_vars = NULL,
     right_vars = NULL,
-    function_to_ignore = c("if", "else if", "else", "<", ">", "<=", ">=", "==", "!=", "{"),
+    # this is a bit tricky. If variables are found within this functions they are ignored
+    function_to_ignore = c("if", "else if", "else", "<", ">", "<=", ">=", "==", "!=", "{", "length"),
     symbol_fct_call = NULL,
     left_side = FALSE,
-    functions = c("[", "(", "+", "-", "/", "*", "log", "exp", "^"),
+    functions = c("[", "(", "+", "-", "/", "*", "^"),
+    isfct = FALSE,
     
-    initialize = function(function_list) {
-      self$functions <- c(self$functions, function_list)
+    initialize = function(const_fcts) {
+      self$function_to_ignore <- c(self$function_to_ignore, const_fcts)
     },
     
     save_rs = function(inp) {
-      self$right_vars <- c(self$right_vars, inp)
+      if(self$isfct) self$right_vars <- c(self$right_vars, inp)
     },
     
     save_ls = function(inp) {
-      self$left_vars <- c(self$left_vars, inp)
+      if(self$isfct) self$left_vars <- c(self$left_vars, inp)
     },
     
     find_vars = function(codeline) {
@@ -96,8 +128,10 @@ Vars <- R6::R6Class(
             self$left_side <- FALSE
           }
         } 
-        
+        self$isfct <- FALSE
         return(codeline)
+      } else {
+        self$isfct <- TRUE
       } 
       
       codeline = as.call(codeline)
@@ -140,7 +174,7 @@ Vars <- R6::R6Class(
                     }
                   }
                 }
-              })
+              } )
               
             } 
           } else {

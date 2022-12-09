@@ -3,13 +3,14 @@ fct <- setClass(
   slots = list(
     name = "character",
     dfdx = "function",
-    name_deriv = "character"
+    name_deriv = "character",
+    keep = "logical"
   )
 )
 
 setGeneric(
   name = "add_fct",
-  def = function(obj, name, dfdx_new) {
+  def = function(obj, name, dfdx_new, keep = FALSE) {
     standardGeneric("add_fct")
   } 
 )
@@ -17,7 +18,7 @@ setGeneric(
 # used only internally
 setGeneric(
   name = "append_fct",
-  def = function(obj, name, dfdx_new, name_deriv_new) {
+  def = function(obj, name, dfdx_new, name_deriv_new, keep_new) {
     standardGeneric("append_fct")
   } 
 )
@@ -34,6 +35,13 @@ setGeneric(
   def = function(obj, name) {
     standardGeneric("get_derivative_name")
   } 
+)
+
+setGeneric(
+  name = "get_keep",
+  def = function(obj, name) {
+    standardGeneric("get_keep")
+  }
 )
 
 fcts <- setClass(
@@ -53,8 +61,8 @@ setMethod(
 setMethod(
   f = "add_fct",
   signature = "fcts",
-  definition = function(obj, name, dfdx_new) {
-    obj@funs[[name]] = fct(name = name, dfdx = dfdx_new,
+  definition = function(obj, name, dfdx_new, keep = FALSE) {
+    obj@funs[[name]] = fct(name = name, dfdx = dfdx_new, keep = keep,
                            name_deriv = as.character(deparse(substitute(dfdx_new))) )
     obj
   }
@@ -63,8 +71,8 @@ setMethod(
 setMethod(
   f = "append_fct",
   signature = "fcts",
-  definition = function(obj, name, dfdx_new, name_deriv_new) {
-    obj@funs[[name]] = fct(name = name, dfdx = dfdx_new, name_deriv =  name_deriv_new)
+  definition = function(obj, name, dfdx_new, name_deriv_new, keep_new) {
+    obj@funs[[name]] = fct(name = name, dfdx = dfdx_new, name_deriv =  name_deriv_new, keep = keep_new)
     obj
   }
 )
@@ -101,90 +109,32 @@ setMethod(
   }
 )
 
-#' Derivative function for sin
-#'
-#' @export
-sin_deriv <- function(x) { cos(x) }
+setMethod(
+  f = "get_keep",
+  signature = "fcts",
+  definition = function(obj, name) {
+    obj@funs[[name]]@keep
+  }
+)
 
-#' Derivative function for sinh
-#'
-#' @export
-sinh_deriv <- function(x) { cosh(x) }
 
-#' Derivative function for asin
-#'
-#' @export
-asin_deriv <- function(x) { 1/(sqrt(1 - x^2) ) }
-
-#' Derivative function for cos
-#'
-#' @export
-cos_deriv <- function(x) { -sin(x) }
-
-#' Derivative function for cosh
-#'
-#' @export
-cosh_deriv <- function(x) { sinh(x) }
-
-#' Derivative function for acos
-#'
-#' @export
-acos_deriv <- function(x) { -asin(x) }
-
-#' Derivative function for tan
-#'
-#' @export
-tan_deriv <- function(x) { tan(x)^2 + 1 }
-
-#' Derivative function for tanh
-#'
-#' @export
-tanh_deriv <- function(x) { 1 - tanh(x)^2 }
-
-#' Derivative function for atan
-#'
-#' @export
-atan_deriv <- function(x) { 1 / (1 + x^2) }
-
-#' Derivative function for exp
-#'
-#' @export
-exp_deriv <- function(x) { exp(x) }
-
-#' Derivative function for log
-#'
-#' @export
-log_deriv <- function(x) { 1/x }
-
-#' Derivative function for sqrt
-#'
-#' @export
-sqrt_deriv <- function(x) { 0.5 * (x)^(-0.5) }
-
-#' Derivative function for c
-#'
-#' @export
-c_deriv <- function(...) {c(...)}
-
-#' Derivative function for vector
-#'
-#' @export
-vector_deriv <- function(x) {vector(length = x)}
-
-#' Derivative function for numeric
-#'
-#' @export
-numeric_deriv <- function(x) {numeric(x)}
-
-#' Derivative function for rep
-#'
-#' @export
-rep_deriv <- function(x, y) {rep(x, y)}
-
-#' Derivative function for matrix
-#'
-#' @export
-matrix_deriv <- function(val = 0, x, y) {matrix(val, x, y)}
+sin_deriv <- function(x) cos(x)
+sinh_deriv <- function(x)  cosh(x) 
+asin_deriv <- function(x) 1/(sqrt1 - x^2) 
+cos_deriv <- function(x) -sin(x) 
+cosh_deriv <- function(x) sinh(x) 
+acos_deriv <- function(x) -asin(x) 
+tan_deriv <- function(x) tan(x)^2 + 1 
+tanh_deriv <- function(x) 1 - tanh(x)^2 
+atan_deriv <- function(x) 1 / (1 + x^2) 
+exp_deriv <- function(x) exp(x) 
+log_deriv <- function(x) 1/x 
+sqrt_deriv <- function(x) 0.5 * (x)^(-0.5) 
+c_deriv <- function(...) c(...)
+vector_deriv <- function(x) vector(length = x)
+numeric_deriv <- function(x) numeric(x)
+rep_deriv <- function(x, y) rep(x, y)
+matrix_deriv <- function(val = 0, x, y) matrix(val, x, y)
 
 
 
@@ -202,10 +152,10 @@ init_fct_list <- function() {
   f <- add_fct(f, "exp",  exp_deriv)
   f <- add_fct(f, "log",  log_deriv)
   f <- add_fct(f, "sqrt", sqrt_deriv)
-  f <- add_fct(f, "c", c_deriv)
-  f <- add_fct(f, "vector", vector_deriv)
-  f <- add_fct(f, "numeric", numeric_deriv)
-  f <- add_fct(f, "rep", rep_deriv)
-  f <- add_fct(f, "matrix", matrix_deriv)
+  f <- add_fct(f, "c", c_deriv, TRUE)
+  f <- add_fct(f, "vector", vector_deriv, TRUE)
+  f <- add_fct(f, "numeric", numeric_deriv, TRUE)
+  f <- add_fct(f, "rep", rep_deriv, TRUE)
+  f <- add_fct(f, "matrix", matrix_deriv, TRUE)
   return(f)
 }
