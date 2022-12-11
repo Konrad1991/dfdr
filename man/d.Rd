@@ -4,7 +4,7 @@
 \alias{d}
 \title{Differentiate a function for a single variable.}
 \usage{
-d(f, x, derivs = NULL)
+d(f, x, derivs = NULL, const = NULL)
 }
 \arguments{
 \item{f}{The function to differentiate.}

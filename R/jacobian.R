@@ -26,14 +26,14 @@
 #' library(dfdr)
 #' jacobian(f, y, x)
 jacobian <- function(f, y, x, derivs = NULL) {
-  stopifnot("the function is missing"=!is.null(f))
-  stopifnot("the variable y is missing"=!is.null(y))
-  stopifnot("the variable x is missing"=!is.null(x))
-  
   y <- rlang::ensym(y) 
   y <- rlang::as_string(y)
   x <- rlang::ensym(x) 
   x <- rlang::as_string(x)
+  
+  stopifnot("the function is missing"=!is.null(f))
+  stopifnot("the variable y is missing"=!is.null(y))
+  stopifnot("the variable x is missing"=!is.null(x))
 
   # create function list
   # ============================================================================
@@ -41,10 +41,15 @@ jacobian <- function(f, y, x, derivs = NULL) {
   if(!is.null(derivs)) {
     fd <- derivs@funs
     for(i in seq_along(fd)) {
-      fl <- append_fct(fl, fd[[i]]@name, fd[[i]]@dfdx, fd[[i]]@name_deriv)
+      fl <- append_fct(fl, fd[[i]]@name, fd[[i]]@dfdx, fd[[i]]@name_deriv, fd[[i]]@keep)
     }
   }
   fct_list <- get_names(fl)
+  
+  const_fcts <- character()
+  for(i in fct_list) {
+    if(get_keep(fl, fct_list[i])) const_fcts <- c(const_fcts, fct_list[i])
+  }
   
   # extract body and replacing
   # ============================================================================
@@ -60,7 +65,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
   
   for(i in seq_along(1:length(body))) {
     in_if <- FALSE
-    v <- Vars$new(fct_list)
+    v <- Vars$new(const_fcts)
     ast <- v$find_vars(body[[i]])
 
     if(body[[i]][[1]] == as.name("if")) {
@@ -112,7 +117,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
     
     
     # check if block
-    v <- Vars$new(fct_list)
+    v <- Vars$new(const_fcts)
     ast <- v$find_vars(body_new[[i]])
     ls <- v$get_ls() 
     if(in_if) {
@@ -146,9 +151,9 @@ jacobian <- function(f, y, x, derivs = NULL) {
   
   body_new[[1]] <- str2lang( paste(noquote(jac_mat),
                                    "<- matrix(0, length(",
-                                   noquote(y), "),",
+                                   x, "),",
                                    "length(",
-                                   noquote(y), "))"
+                                   x, "))"
                                    ) )
   counter <- 2
   ret_found <- FALSE
@@ -165,7 +170,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
     }
     
     codeline <- NULL
-    
     if(in_if) {
       u <- Unfold$new(diff, fl, to_diff, y, jac_mat)
       ast <- u$uf(body[[i]])
