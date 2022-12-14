@@ -1,7 +1,8 @@
 ^.*\.Rproj$
-^\.Rproj\.user$
-README.Rmd
-^\.travis\.yml$
+^.Rproj\.user$
+^README.Rmd
+^README.md
+^.travis\.yml$
 ^codecov\.yml$
 ^LICENSE$
 ^README_files/.*$

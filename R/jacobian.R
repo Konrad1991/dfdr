@@ -1,30 +1,73 @@
-#' Compute jacobian function
+#' @title jacobian function
 #'
-#' Creates a function that computes the jacobian-matrix of a function with respect to one parameter
-#' and return a matrix of these.
+#' @description 
+#' Creates a function that computes the jacobi-matrix of a function for one specific variable. Hereinafter the variable is called \emph{y}.
+#' The derivative is calculated with respect to one of the arguments of the function. Subsequently, the variable is called \emph{x}.
+#' The returned function can be called at any possible point of \emph{x}.
 #'
-#' @param f  A function
+#' @param f A function
 #' @param y The variables to compute the derivatives of (the dependent variable). For example: \eqn{\frac{dy}{dx}}
 #' @param x The variables to which respect the variables are calcualted (the independent variable). For example: \eqn{\frac{dy}{dx}}
-#' @param use_names Should the gradient add variable names to the output of the function?
-#' @return  A function that computes the jacboian-matrix of f at any point.
+#' @param derivs optional input defining own functions which should be used. See \code{\link{d}()} for details.
+#' @return  A function that computes the jacobi-matrix of f. Notably, it expects the dame arguments as the input function \emph{f}.
 #' @export
-#' @details   
-#' In main scope \cr
-#' y[1] = ...  : allowed \cr
-#' x[1] = 1    : allowed \cr
-#' a    = x[1] : replace it \cr
-#' b    = y[1] : replace it \cr
-#' In if/else if/else block \cr
-#' y[1] = ...  : only this is allowed! \cr
-#' @examples
-#' f <- function(t, x, p) {
-#'     y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
-#'     y[2] <- x[1]*x[2]*c - x[2]*d
+#' @details 
+#' The function \emph{jacobian} is intended for using it for functions accepting vectors (in case of \emph{x}) and returns a vector (for \emph{y}). \cr
+#' Mentionable, only integers are allowed for indexing the vectors. Moreover, only one element at the time can be changed. 
+#' For instance, \emph{y[1]} is permitted. In contrast, \emph{y[1.5]} or \emph{y[variable]} will throw an error.\cr
+#' As usually it is possible to define new variables. 
+#' If \emph{x} and/or \emph{y} are found at the right side of the assignment operator the variable is replaced in all following lines.
+#' See the example below: \cr
+#' \verb{
+#'   # Old code
+#'   a <- x[1]
+#'   b <- 3
+#'   y[1] <- a*b 
+#'   # New code
+#'   b <- 3
+#'   y[1] <- a*3
+#' } 
+#' 
+#' Furthermore, it is possible to use \emph{if, else if, else} blocks within the function.
+#' However, the dependent variable have to be located at the left side of the assignment operator.
+#' This restriction is necessary as variables found in previous lines are replaced in the following lines.
+#' \verb{
+#'   # allowed code
+#'   f <- function(x, t) {
+#'      y <- numeric(2)
+#'      y[1] <- 2*x[1]^3
+#'      if(t < 3) {
+#'         y[2] <- x[2]^2
+#'      } else {
+#'         y[2] <- x[2]^4
+#'      }
 #'     return(y)
+#'   }
+#' 
+#'   # not allowed code
+#'   f <- function(x, t) {
+#'      y <- numeric(2)
+#'      y[1] <- 2*x[1]^3
+#'      a <- 0
+#'      if(t < 3) {
+#'         a <- x[2]^2
+#'      } else {
+#'         a <- x[2]^4
+#'      }
+#'      y[2] <- a
+#'     return(y)
+#'   }
+#'   
+#' } 
+#' @examples 
+#' f <- function(x) {
+#'    y <- numeric(2)
+#'    y[1] <- x[1]^2 + sin(4)
+#'    y[2] <- x[2]*7
+#'    return(y)
 #' }
-#' library(dfdr)
-#' jacobian(f, y, x)
+#' jac <- dfdr::jacobian(f, y, x)
+#' jac(c(1, 2))
 jacobian <- function(f, y, x, derivs = NULL) {
   y <- rlang::ensym(y) 
   y <- rlang::as_string(y)
@@ -37,7 +80,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
 
   # create function list
   # ============================================================================
-  fl <- dfdr:::init_fct_list()
+  fl <- init_fct_list()
   if(!is.null(derivs)) {
     fd <- derivs@funs
     for(i in seq_along(fd)) {
@@ -93,7 +136,8 @@ jacobian <- function(f, y, x, derivs = NULL) {
         tocheck_right <- rbfv(rs[[j]])
         tocheck_left <- rbfv(ls[[1]])
         if( check(tocheck_right, x, y) && tocheck_left != y ) {
-          to_be_replaced[[counter]] <- c(index = i, to_be_replaced = ls, replace_with = deparse(body[[i]][[3]])) 
+          to_be_replaced[[counter]] <- c(index = i, to_be_replaced = ls,
+                                         replace_with = deparse(body[[i]][[3]])) 
           counter <- counter + 1
           break
         } 
@@ -115,7 +159,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
       }
     }
     
-    
     # check if block
     v <- Vars$new(const_fcts)
     ast <- v$find_vars(body_new[[i]])
@@ -126,8 +169,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
         if(tocheck != y) stop("Only the dependent variable (Input argument = y) is allowed at the left side")
       }
     }
-    
-    
     
   } # end loop over body
  

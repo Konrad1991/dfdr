@@ -11,13 +11,38 @@ lift <- function(f) {
 
 #' Differentiate a function for a single variable.
 #'
-#' @param f  The function to differentiate.
-#' @param x  The variable that f should be differentiated with respect to.#
-#' @param derivs An S4 class of type *fcts* that defines additional derivatives.
-#' @return \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}} if called with function f and symbol x.
+#' @param f The function to differentiate.
+#' @param x The variable that f should be differentiated with respect to.
+#' @param derivs An S4 class of type \emph{fcts} that defines additional derivatives. See \code{\link{fcts}} for details.
+#' @param const is a variable which is used internally by \code{\link{jacobian}()}. A environment is expected which holds a logical value called \emph{const}. \cr
+#'              In case a function is found which should be ignored the value of \emph{const} is set to TRUE.
+#'              
+#' @details 
+#' The following functions are already supported: \cr
+#' sin, sinh, asin, cos, cosh, acos, tan, tanh, atan, exp, log, sqrt, c, vector, numeric, rep and matrix. \cr
+#' Notably, for the functions: c, vector, numeric, rep and matrix the function is ignored during differentiation.              
+#'              
+#' @return For example function f and symbol x: \cr
+#' \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}}
+#' @examples 
+#' library(dfdr)
+#' d(sin, x)
+#' 
+#' f <- function(x) -sin(x)
+#' d(f, x)
+#' 
+#' # Initialize list
+#' lst <- dfdr::fcts()
+#' # The function which should be added
+#' f <- function(x) x^2
+#' # The dervative function of f
+#' f_deriv <- function(x) 2*x
+#' # add new entry to list
+#' lst <- fcts_add_fct(lst, f, f_deriv)
+#' g <- function(z) f(z)
+#' d(g, z, lst)
 #' @export
 d <- function(f, x, derivs = NULL, const = NULL) {
-  #trash <- x # just a trick that enexpr of x works correctly for gradient
   x <- rlang::enexpr(x)
   fl <- init_fct_list()
   if(!is.null(derivs)) {
@@ -149,7 +174,7 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   od <- list()
   counter <- 1
   for(i in seq_along(args)) {
-    od[[counter]] <- modexpr(outer_deriv, substi, bquote( .(deriv_args[[i]]) ), args[[i]] )
+    od[[counter]] <- pryr::modify_lang(outer_deriv, substi, bquote( .(deriv_args[[i]]) ), args[[i]] )
     counter <- counter + 1
   }
   outer_deriv <- od
