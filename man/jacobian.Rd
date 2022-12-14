@@ -2,7 +2,7 @@
 % Please edit documentation in R/jacobian.R
 \name{jacobian}
 \alias{jacobian}
-\title{Compute jacobian function}
+\title{jacobian function}
 \usage{
 jacobian(f, y, x, derivs = NULL)
 }
@@ -13,30 +13,72 @@ jacobian(f, y, x, derivs = NULL)
 
 \item{x}{The variables to which respect the variables are calcualted (the independent variable). For example: \eqn{\frac{dy}{dx}}}
 
-\item{use_names}{Should the gradient add variable names to the output of the function?}
+\item{derivs}{optional input defining own functions which should be used. See \code{\link{d}()} for details.}
 }
 \value{
-A function that computes the jacboian-matrix of f at any point.
+A function that computes the jacobi-matrix of f. Notably, it expects the dame arguments as the input function \emph{f}.
 }
 \description{
-Creates a function that computes the jacobian-matrix of a function with respect to one parameter
-and return a matrix of these.
+Creates a function that computes the jacobi-matrix of a function for one specific variable. Hereinafter the variable is called \emph{y}.
+The derivative is calculated with respect to one of the arguments of the function. Subsequently, the variable is called \emph{x}.
+The returned function can be called at any possible point of \emph{x}.
 }
 \details{
-In main scope \cr
-y[1] = ...  : allowed \cr
-x[1] = 1    : allowed \cr
-a    = x[1] : replace it \cr
-b    = y[1] : replace it \cr
-In if/else if/else block \cr
-y[1] = ...  : only this is allowed! \cr
+The function \emph{jacobian} is intended for using it for functions accepting vectors (in case of \emph{x}) and returns a vector (for \emph{y}). \cr
+Mentionable, only integers are allowed for indexing the vectors. Moreover, only one element at the time can be changed. 
+For instance, \emph{y[1]} is permitted. In contrast, \emph{y[1.5]} or \emph{y[variable]} will throw an error.\cr
+As usually it is possible to define new variables. 
+If \emph{x} and/or \emph{y} are found at the right side of the assignment operator the variable is replaced in all following lines.
+See the example below: \cr
+\verb{
+  # Old code
+  a <- x[1]
+  b <- 3
+  y[1] <- a*b 
+  # New code
+  b <- 3
+  y[1] <- a*3
+} 
+
+Furthermore, it is possible to use \emph{if, else if, else} blocks within the function.
+However, the dependent variable have to be located at the left side of the assignment operator.
+This restriction is necessary as variables found in previous lines are replaced in the following lines.
+\verb{
+  # allowed code
+  f <- function(x, t) {
+     y <- numeric(2)
+     y[1] <- 2*x[1]^3
+     if(t < 3) {
+        y[2] <- x[2]^2
+     } else {
+        y[2] <- x[2]^4
+     }
+    return(y)
+  }
+
+  # not allowed code
+  f <- function(x, t) {
+     y <- numeric(2)
+     y[1] <- 2*x[1]^3
+     a <- 0
+     if(t < 3) {
+        a <- x[2]^2
+     } else {
+        a <- x[2]^4
+     }
+     y[2] <- a
+    return(y)
+  }
+  
+}
 }
 \examples{
-f <- function(t, x, p) {
-    y[1] <- x[1]*a - x[1]*x[2]*b + sin(a)
-    y[2] <- x[1]*x[2]*c - x[2]*d
-    return(y)
+f <- function(x) {
+   y <- numeric(2)
+   y[1] <- x[1]^2 + sin(4)
+   y[2] <- x[2]*7
+   return(y)
 }
-library(dfdr)
-jacobian(f, y, x)
+jac <- dfdr::jacobian(f, y, x)
+jac(c(1, 2))
 }

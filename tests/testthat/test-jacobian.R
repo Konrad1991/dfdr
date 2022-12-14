@@ -33,7 +33,7 @@ test_that("we can compute the jacobian of a function", {
   ncol <- 2
   expect_equal(res, matrix(d, nrow, ncol))
   
-  # error
+  # replacement at right side
   f <- function(x) {
     y <- c(0, 0)
     a <- 7 
@@ -50,8 +50,7 @@ test_that("we can compute the jacobian of a function", {
   ncol <- 2
   expect_equal(res, matrix(d, nrow, ncol))
   
-  # error
-  # several replacements at left side
+  # several replacements at left side and right side
   f <- function(x) {
     y <- rep(0, 2)
     a <- 8

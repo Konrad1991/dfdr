@@ -1,29 +1,5 @@
 # helper functions
 # ============================================================================
-modexpr <- function (x, f, ...)  {
-  recurse <- function(y) {
-    lapply(y, modexpr, f = f, ...)
-  }
-  if (is.atomic(x) || is.name(x)) {
-    f(x, ...)
-  } else if (is.call(x)) {
-    as.call(recurse(x))
-  } else if (is.function(x)) {
-    formals(x) <- modexpr(formals(x), f, ...)
-    body(x) <- modexpr(body(x), f, ...)
-    x
-  } else if (is.pairlist(x)) {
-    as.pairlist(recurse(x))
-  } else if (is.expression(x)) {
-    as.expression(recurse(x))
-  } else if (is.list(x)) {
-    recurse(x)
-  } else {
-    stop("Unknown language class: ", paste(class(x), collapse = "/"), 
-         call. = FALSE)
-  }
-}
-
 substi <- function(inp, replace, replace_with) {
   if (is.name(inp) && identical(inp, replace)) return(bquote(.(replace_with)))
   inp

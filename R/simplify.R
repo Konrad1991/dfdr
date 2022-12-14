@@ -36,7 +36,18 @@ simplify_error <- function(expr) {
 #'
 #' @param expr An expression
 #' @return a simplified expression
+#' @examples 
+#' ex <- quote(a*0 + b^2 + 0)
+#' simplify(ex)
 #' @export
+simplify <- function(expr) {
+  expr |> purrr::when(
+    is_literal(.)     ~ identity(.),
+    rlang::is_call(.) ~ simplify_call(.),
+    ~ simplify_error(.)
+  )
+} 
+
 simplify_expr <- lift(function(expr) {
   expr |> purrr::when(
     is_literal(.)     ~ identity(.),
