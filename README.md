@@ -1,6 +1,12 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6e7320d006a94a09b7dd99860bf1defb)](https://www.codacy.com/app/mailund/dfdr?utm_source=github.com&utm_medium=referral&utm_content=mailund/dfdr&utm_campaign=badger)
 [![Travis-CI Build Status](https://travis-ci.org/mailund/dfdr.svg?branch=master)](https://travis-ci.org/mailund/dfdr) [![Coverage Status](https://img.shields.io/codecov/c/github/mailund/dfdr/master.svg)](https://codecov.io/github/mailund/dfdr?branch=master) [![Coverage Status](https://coveralls.io/repos/github/mailund/dfdr/badge.svg?branch=master)](https://coveralls.io/github/mailund/dfdr?branch=master)
 
+## News
+
+- Original code was written by Thomas Mailund (https://github.com/mailund)
+- In late 2022 Thomas and I (Konrad Krämer) extanded `dfdr`
+- In 2022 maintanance was passed to Konrad Krämer 
+
 dfdr — Automatic differentiation of simple functions in R
 =========================================================
 
