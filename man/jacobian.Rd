@@ -9,9 +9,9 @@ jacobian(f, y, x, derivs = NULL)
 \arguments{
 \item{f}{A function}
 
-\item{y}{The variables to compute the derivatives of (the dependent variable). For example: \eqn{\frac{dy}{dx}}}
+\item{y}{The variables to compute the derivatives of (the dependent variable). For example: \emph{df/dx}}
 
-\item{x}{The variables to which respect the variables are calcualted (the independent variable). For example: \eqn{\frac{dy}{dx}}}
+\item{x}{The variables to which respect the variables are calcualted (the independent variable). For example: \emph{df/dx}}
 
 \item{derivs}{optional input defining own functions which should be used. See \code{\link{d}()} for details.}
 }

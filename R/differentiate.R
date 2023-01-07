@@ -23,7 +23,7 @@ lift <- function(f) {
 #' Notably, for the functions: c, vector, numeric, rep and matrix the function is ignored during differentiation.              
 #'              
 #' @return For example function f and symbol x: \cr
-#' \deqn{\frac{\mathrm{d}f}{\mathrm{d}x}}
+#' \emph{df/dx}
 #' @examples 
 #' library(dfdr)
 #' d(sin, x)
@@ -157,7 +157,7 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   keep <- get_keep(fl, name)
   if(keep) {
     warning(paste("Found function", name,  "which should be kept constant. This function is not considered for calculating the derivatives. Notably, also the arguments of the functions are ignored!") )
-    const$const <- TRUE
+    #const$const <- TRUE # do i need this???
     return(expr)
   }
   name_deriv <- get_derivative_name(fl, name)
@@ -203,6 +203,10 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   if(identical(entire_deriv, character(0))) {
     return(str2lang("0"))
   }
+  if(entire_deriv == "") {
+    return(str2lang("0"))
+  }
+
   str2lang(entire_deriv)
 })
 

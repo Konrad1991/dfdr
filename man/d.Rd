@@ -18,7 +18,7 @@ In case a function is found which should be ignored the value of \emph{const} is
 }
 \value{
 For example function f and symbol x: \cr
-\deqn{\frac{\mathrm{d}f}{\mathrm{d}x}}
+\emph{df/dx}
 }
 \description{
 Differentiate a function for a single variable.

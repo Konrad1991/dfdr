@@ -2,11 +2,9 @@ Package: dfdr
 Type: Package
 Title: Automatic Differentiation of Simple Functions
 Version: 0.1.0
-Author: Mailund Thomas [aut, cre],
-  Krämer Konrad [aut]
-Maintainer: Krämer Konrad <konrad_kraemer@yahoo.de>
+Authors@R:c(person("Thomas", "Mailund", role = "aut"), person("Konrad", "Krämer", role = c("aut", "cre"), email = "konrad_kraemer@yahoo.de") )
 Description: Implementation of automatically computing derivatives
-    of functions. Moreover, calculating gradients, hessian and jacobian matrices is possible.
+    of functions (see Mailund Thomas (2017) <doi:10.1007/978-1-4842-2881-4>). Moreover, calculating gradients, Hessian and Jacobian matrices is possible.
 License: GPL-3
 Encoding: UTF-8
 Imports:

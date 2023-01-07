@@ -6,8 +6,8 @@
 #' The returned function can be called at any possible point of \emph{x}.
 #'
 #' @param f A function
-#' @param y The variables to compute the derivatives of (the dependent variable). For example: \eqn{\frac{dy}{dx}}
-#' @param x The variables to which respect the variables are calcualted (the independent variable). For example: \eqn{\frac{dy}{dx}}
+#' @param y The variables to compute the derivatives of (the dependent variable). For example: \emph{df/dx}
+#' @param x The variables to which respect the variables are calcualted (the independent variable). For example: \emph{df/dx}
 #' @param derivs optional input defining own functions which should be used. See \code{\link{d}()} for details.
 #' @return  A function that computes the jacobi-matrix of f. Notably, it expects the dame arguments as the input function \emph{f}.
 #' @export
@@ -107,6 +107,17 @@ jacobian <- function(f, y, x, derivs = NULL) {
   counter_bn <- 1
   
   for(i in seq_along(1:length(body))) {
+    
+    # replace in current line x with x[1] and y with y[1]
+    r <- Replace_y_x$new(y, paste0(y, "[1]"))
+    b_i <- r$replaceit(body_new[[i]])
+    b_i_call <- r$get_code(b_i)
+    body[[i]] <- b_i_call
+    r <- Replace_y_x$new(x, paste0(x, "[1]"))
+    b_i <- r$replaceit(body_new[[i]])
+    b_i_call <- r$get_code(b_i)
+    body[[i]] <- b_i_call
+    
     in_if <- FALSE
     v <- Vars$new(const_fcts)
     ast <- v$find_vars(body[[i]])
@@ -158,7 +169,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
         body_new[[index + k - 1]] <- tb
       }
     }
-    
+  
     # check if block
     v <- Vars$new(const_fcts)
     ast <- v$find_vars(body_new[[i]])
@@ -189,7 +200,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
   # call dfdr::d for each term at right hand side
   # ============================================================================
   body_new <- list()
-  
   body_new[[1]] <- str2lang( paste(noquote(jac_mat),
                                    "<- matrix(0, length(",
                                    x, "),",

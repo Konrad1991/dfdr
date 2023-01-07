@@ -6,3 +6,5 @@
 ^codecov\.yml$
 ^LICENSE$
 ^README_files/.*$
+^CRAN-SUBMISSION$
+^cran-comments.md
