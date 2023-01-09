@@ -50,7 +50,6 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
     const$const <- FALSE
     df <- d(fct, !!inp, fl, const)
     cl <- call("=", leftside, codeline)
-    if(const$const) return(NULL)
     if(length(leftside) == 1 && length(inp)) {
       jac_mat <- paste0(jac_mat, "[1, 1]")
     } else if(length(leftside) >= 3 && length(inp) >= 3) {

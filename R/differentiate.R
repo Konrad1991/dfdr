@@ -82,10 +82,10 @@ d <- function(f, x, derivs = NULL, const = NULL) {
   }
 }
 
-diff_vector_out <- function(expr, x, fl) {
+diff_vector_out <- function(expr, x, fl, const) {
   d_args <- expr |>
     rlang::call_args() |>
-    purrr::map(\(ex) diff_expr(ex, x, fl))
+    purrr::map(\(ex) diff_expr(ex, x, fl, const))
   as.call(c(as.name("c"), d_args))
 }
 
@@ -111,43 +111,43 @@ diff_expr <- lift(function(expr, x, fl, const) {
   )
 })
 
-diff_addition <- function(expr, x, fl) {
-  lhs <- call_arg(expr, 1) |> diff_expr(x, fl)
-  rhs <- call_arg(expr, 2) |> diff_expr(x, fl)
+diff_addition <- function(expr, x, fl, const) {
+  lhs <- call_arg(expr, 1) |> diff_expr(x, fl, const)
+  rhs <- call_arg(expr, 2) |> diff_expr(x, fl, const)
   bquote( .(lhs) + .(rhs) )
 }
 
-diff_subtraction <- function(expr, x, fl) {
-  lhs <- call_arg(expr, 1) |> diff_expr(x, fl)
-  rhs <- call_arg(expr, 2) |> diff_expr(x, fl)
+diff_subtraction <- function(expr, x, fl, const) {
+  lhs <- call_arg(expr, 1) |> diff_expr(x, fl, const)
+  rhs <- call_arg(expr, 2) |> diff_expr(x, fl, const)
   if (rlang::is_null(rhs)) bquote( -.(lhs) )
   else bquote( .(lhs) - .(rhs) )
 }
 
-diff_multiplication <- function(expr, x, fl) {
+diff_multiplication <- function(expr, x, fl, const) {
   # f' g + f g'
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl)
-  dg <- diff_expr(g, x, fl)
+  df <- diff_expr(f, x, fl, const)
+  dg <- diff_expr(g, x, fl, const)
   bquote( .(df)*.(g) + .(f)*.(dg) )
 }
 
-diff_division <- function(expr, x, fl) {
+diff_division <- function(expr, x, fl, const) {
   # (f' g − f g' )/g**2
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl)
-  dg <- diff_expr(g, x, fl)
+  df <- diff_expr(f, x, fl, const)
+  dg <- diff_expr(g, x, fl, const)
   bquote( ( .(df)*.(g) - .(f)*.(dg) ) / .(g)**2 )
 }
 
-diff_exponentiation <- function(expr, x, fl) {
+diff_exponentiation <- function(expr, x, fl, const) {
   # Using the chain rule to handle this generally.
   # if y = f**g then dy/dx = dy/df df/dx = g * f**(g-1) * df/dx
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl)
+  df <- diff_expr(f, x, fl, const)
   bquote( .(g) * .(f)**(.(g)-1) * .(df) )
 }
 
@@ -157,13 +157,14 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   keep <- get_keep(fl, name)
   if(keep) {
     warning(paste("Found function", name,  "which should be kept constant. This function is not considered for calculating the derivatives. Notably, also the arguments of the functions are ignored!") )
-    #const$const <- TRUE # do i need this???
-    return(expr)
+    const$const <- TRUE 
+    return(0)
   }
+  
   name_deriv <- get_derivative_name(fl, name)
   len <- length(expr)
   args <- sapply(seq_along(2:len), function(x) call_arg(expr, x))
-  dy_dx <- sapply(args, function(as) diff_expr(as, x, fl) )
+  dy_dx <- sapply(args, function(as) diff_expr(as, x, fl, const) )
   if(!is.list(args)) args <- as.list(args)
   deriv_args <- formalArgs(get_derivative(fl, name))
   deriv_args <- lapply(deriv_args, str2lang)
@@ -210,8 +211,8 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   str2lang(entire_deriv)
 })
 
-diff_parens <- function(expr, x, fl) {
-  subexpr <- diff_expr(call_arg(expr, 1), x, fl)
+diff_parens <- function(expr, x, fl, const) {
+  subexpr <- diff_expr(call_arg(expr, 1), x, fl, const)
   if (is.atomic(subexpr) || is.name(subexpr)) subexpr
   else if (is.call(subexpr) && call_name(subexpr) == "(")
     subexpr
@@ -224,14 +225,14 @@ diff_call <- lift(function(expr, x, fl, const) {
   arg2 <- call_arg(expr, 2)
   call_name(expr) |> purrr::when(
     is.name(.) ~ . |> purrr::when(
-      . == "+" ~ diff_addition(expr, x, fl),
-      . == "-" ~ diff_subtraction(expr, x, fl),
-      . == "*" ~ diff_multiplication(expr, x, fl),
-      . == "/" ~ diff_division(expr, x, fl),
-      . == "^" ~ diff_exponentiation(expr, x, fl),
-      . == "(" ~ diff_parens(expr, x, fl),
+      . == "+" ~ diff_addition(expr, x, fl, const),
+      . == "-" ~ diff_subtraction(expr, x, fl, const),
+      . == "*" ~ diff_multiplication(expr, x, fl, const),
+      . == "/" ~ diff_division(expr, x, fl, const),
+      . == "^" ~ diff_exponentiation(expr, x, fl, const),
+      . == "(" ~ diff_parens(expr, x, fl, const),
       (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl, const),
-      . == "c" ~ diff_vector_out(expr, x, fl),
+      . == "c" ~ diff_vector_out(expr, x, fl, const),
       ~ stop(paste("The function", ., "is not supported"))
     ),
     ~ stop(paste("The function", ., "is not supported"))

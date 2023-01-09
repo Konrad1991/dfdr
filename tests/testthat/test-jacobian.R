@@ -170,6 +170,51 @@ test_that("we can compute the jacobian of a function", {
   nrow <- 2
   ncol <- 2
   expect_equal(res, matrix(d, nrow, ncol))
-
+  
+  # using a and b instead of x and y
+  f <- function(a, t) {
+    b <- vector(length = 2)
+    b[1] <- a[1]*2
+    b[2] <- a[2]*a[1]
+    return(b)
+  }
+  jac <- dfdr::jacobian(f, b, a)
+  x <- c(2, 5)
+  t <- 10
+  res <- jac(x, t)
+  d <- c(2, 0, 5, 2)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
+  
+  
+  # using own function
+  l <- dfdr:::fcts()
+  f1 <- function(x) 2*x
+  f1_deriv <- function(x) 2.5
+  l <- dfdr:::add_fct(l, "f1", f1_deriv)
+  f <- function(a, t) {
+    b <- vector(length = 2)
+    b[1] <- a[1]*2
+    b[2] <- a[2]*a[1] + f1(a[1]^2)
+    return(b)
+  }
+  jac <- dfdr::jacobian(f, b, a, l)
+  jac  
+  
+  # using own const function
+  l <- dfdr:::fcts()
+  f1 <- function(x) 2*x
+  f1_deriv <- function(x) 0
+  l <- dfdr:::add_fct(l, "f1", f1_deriv, TRUE)
+  f <- function(a, t) {
+    b <- vector(length = 2)
+    c <- f1(a[1])
+    b[1] <- a[1]*2
+    b[2] <- a[2]*a[1]*c*c + f1(a[1])*c
+    return(b)
+  }
+  jac <- dfdr::jacobian(f, b, a, l)
+  jac  
 })
 
