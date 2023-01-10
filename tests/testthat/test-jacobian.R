@@ -200,7 +200,14 @@ test_that("we can compute the jacobian of a function", {
     return(b)
   }
   jac <- dfdr::jacobian(f, b, a, l)
-  jac  
+  x <- c(2, 5)
+  t <- 10
+  res <- jac(x, t)
+  d <- c(2, 0, 15, 2)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
+  
   
   # using own const function
   l <- dfdr:::fcts()
@@ -211,10 +218,34 @@ test_that("we can compute the jacobian of a function", {
     b <- vector(length = 2)
     c <- f1(a[1])
     b[1] <- a[1]*2
-    b[2] <- a[2]*a[1]*c*c + f1(a[1])*c
+    b[2] <- a[2]*a[1]*c*c + f1(a[1])*c - c + (a[1])/(c*a[1])
     return(b)
   }
   jac <- dfdr::jacobian(f, b, a, l)
-  jac  
+  x <- c(2, 5)
+  t <- 10
+  res <- jac(x, t)
+  d <- c(2, 0, 80, 32)
+  nrow <- 2
+  ncol <- 2
+  expect_equal(res, matrix(d, nrow, ncol))
+  
+  
+  # not allowed if term
+  f <- function(a, t) {
+    b <- vector(length = 2)
+    
+    term <- a[1]*2
+    
+    if(t < 3) {
+      term <- a[1]*3
+    }
+    
+    b[1] <- a[1]*2
+    b[2] <- a[2]*a[1]*term
+    return(b)
+  }
+  expect_error(dfdr::jacobian(f, b, a))
+
 })
 

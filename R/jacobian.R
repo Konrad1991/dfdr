@@ -108,19 +108,6 @@ jacobian <- function(f, y, x, derivs = NULL) {
   
   for(i in seq_along(1:length(body))) {
     
-    # replace in current line x with x[1] and y with y[1]
-    if( (body[[i]][[1]] == as.name("<-") ) ||
-        (body[[i]][[1]] == as.name("=") ) ) {
-      r <- Replace_y_x$new(y, paste0(y, "[1]"))
-      b_i <- r$replaceit(body[[i]])
-      b_i_call <- r$get_code(b_i)
-      body[[i]] <- b_i_call
-      r <- Replace_y_x$new(x, paste0(x, "[1]"))
-      b_i <- r$replaceit(body[[i]])
-      b_i_call <- r$get_code(b_i)
-      body[[i]] <- b_i_call
-    }
-    
     in_if <- FALSE
     v <- Vars$new(const_fcts)
     ast <- v$find_vars(body[[i]])
@@ -172,7 +159,7 @@ jacobian <- function(f, y, x, derivs = NULL) {
         body_new[[index + k - 1]] <- tb
       }
     }
-  
+    
     # check if block
     v <- Vars$new(const_fcts)
     ast <- v$find_vars(body_new[[i]])

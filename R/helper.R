@@ -48,7 +48,7 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
   ret <- lapply(indep_vars, function(inp) {
     const <- new.env()
     const$const <- FALSE
-    df <- d(fct, !!inp, fl, const)
+    df <- d(fct, !!inp, fl, const) # const still needed?
     cl <- call("=", leftside, codeline)
     if(length(leftside) == 1 && length(inp)) {
       jac_mat <- paste0(jac_mat, "[1, 1]")
@@ -57,8 +57,8 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
       indep_index <- inp[[3]]
       jac_mat <- paste0(jac_mat, "[", indep_index, ",", fct_index, "]")
     }
-
-    deriv <- call("=", str2lang(jac_mat), body(df))
+    
+    deriv <- call("=", str2lang(jac_mat), simplify_expr(body(df)))
     return(deriv)
   })
   
@@ -319,50 +319,3 @@ Unfold <- R6::R6Class(
   
 )
 
-Replace_y_x <- R6::R6Class("Replace_y_x",
-                           
-public = list(
-  
-  to_replace = NULL,
-  replace_with = NULL,
-  
-  initialize = function(to_replace, replace_with) {
-    self$to_replace = to_replace
-    self$replace_with = replace_with
-  },
-  
-  replaceit = function(code) {
-    if(!is.call(code)) {
-      return(code)
-    }
-    fct = code[[1]]
-    code <- sapply(code, function(x) {
-      if(fct == as.name("[")) return(x)
-      if(is.symbol(x)) {
-        if(is.null(self$to_replace)) return(x)
-        
-        if(deparse(x) == self$to_replace) {
-          warning("changed (in)dependent variable which is not subsetted to var[1]")
-          x = str2lang(bquote(.(self$replace_with)))
-        }
-        return(x)
-      } else {
-        return(x)
-      }
-    })
-    code <- as.call(code)
-    code = as.list(code)
-    lapply(code, self$replaceit)  
-  },
-  
-  get_code = function(code) {
-    out <- purrr::map_if(code, is.list, self$get_code)
-    out <- as.call(out)
-    return(out)
-  }
-  
-) # end public
-
-
-                           
-)
