@@ -4,7 +4,7 @@
 \alias{d}
 \title{Differentiate a function for a single variable.}
 \usage{
-d(f, x, derivs = NULL, const = NULL)
+d(f, x, derivs = NULL)
 }
 \arguments{
 \item{f}{The function to differentiate.}
@@ -12,9 +12,6 @@ d(f, x, derivs = NULL, const = NULL)
 \item{x}{The variable that f should be differentiated with respect to.}
 
 \item{derivs}{An S4 class of type \emph{fcts} that defines additional derivatives. See \code{\link{fcts}} for details.}
-
-\item{const}{is a variable which is used internally by \code{\link{jacobian}()}. A environment is expected which holds a logical value called \emph{const}. \cr
-In case a function is found which should be ignored the value of \emph{const} is set to TRUE.}
 }
 \value{
 For example function f and symbol x: \cr
