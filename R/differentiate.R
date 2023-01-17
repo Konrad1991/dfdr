@@ -14,9 +14,7 @@ lift <- function(f) {
 #' @param f The function to differentiate.
 #' @param x The variable that f should be differentiated with respect to.
 #' @param derivs An S4 class of type \emph{fcts} that defines additional derivatives. See \code{\link{fcts}} for details.
-#' @param const is a variable which is used internally by \code{\link{jacobian}()}. A environment is expected which holds a logical value called \emph{const}. \cr
-#'              In case a function is found which should be ignored the value of \emph{const} is set to TRUE.
-#'              
+#' 
 #' @details 
 #' The following functions are already supported: \cr
 #' sin, sinh, asin, cos, cosh, acos, tan, tanh, atan, exp, log, sqrt, c, vector, numeric, rep and matrix. \cr
@@ -42,7 +40,7 @@ lift <- function(f) {
 #' g <- function(z) f(z)
 #' d(g, z, lst)
 #' @export
-d <- function(f, x, derivs = NULL, const = NULL) {
+d <- function(f, x, derivs = NULL) {
   x <- rlang::enexpr(x)
   fl <- init_fct_list()
   if(!is.null(derivs)) {
@@ -52,9 +50,6 @@ d <- function(f, x, derivs = NULL, const = NULL) {
     }
   }
   
-  if(is.null(const)) const <- new.env()
-  const$const <- FALSE
-
   # Primitive functions, we have to treat carefully. They don't have a body.
   # This is just a short list of such built-in arithmetic functions, it is
   # not exhaustive.
@@ -77,19 +72,19 @@ d <- function(f, x, derivs = NULL, const = NULL) {
     # for other functions we have to parse the body
     # and differentiate it.
     df <- f
-    body(df) <- simplify_expr(diff_expr(body(f), x, fl, const)) 
+    body(df) <- simplify_expr(diff_expr(body(f), x, fl)) 
     df
   }
 }
 
-diff_vector_out <- function(expr, x, fl, const) {
+diff_vector_out <- function(expr, x, fl) {
   d_args <- expr |>
     rlang::call_args() |>
-    purrr::map(\(ex) diff_expr(ex, x, fl, const))
+    purrr::map(\(ex) diff_expr(ex, x, fl))
   as.call(c(as.name("c"), d_args))
 }
 
-diff_expr <- lift(function(expr, x, fl, const) {
+diff_expr <- lift(function(expr, x, fl) {
   if(is.call(expr)) {
     if(as.name("[") == expr[[1]]) {
       stopifnot("Only integers in [] allowed"=check_bracket(expr))
@@ -106,65 +101,64 @@ diff_expr <- lift(function(expr, x, fl, const) {
     is.numeric(.)              ~ quote(0),
     is.name(.) && . == x       ~ quote(1), 
     is.name(.)                 ~ quote(0),
-    is.call(.)                 ~ diff_call(expr, x, fl, const),
+    is.call(.)                 ~ diff_call(expr, x, fl),
     ~ stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
   )
 })
 
-diff_addition <- function(expr, x, fl, const) {
-  lhs <- call_arg(expr, 1) |> diff_expr(x, fl, const)
-  rhs <- call_arg(expr, 2) |> diff_expr(x, fl, const)
+diff_addition <- function(expr, x, fl) {
+  lhs <- call_arg(expr, 1) |> diff_expr(x, fl)
+  rhs <- call_arg(expr, 2) |> diff_expr(x, fl)
   bquote( .(lhs) + .(rhs) )
 }
 
-diff_subtraction <- function(expr, x, fl, const) {
-  lhs <- call_arg(expr, 1) |> diff_expr(x, fl, const)
-  rhs <- call_arg(expr, 2) |> diff_expr(x, fl, const)
+diff_subtraction <- function(expr, x, fl) {
+  lhs <- call_arg(expr, 1) |> diff_expr(x, fl)
+  rhs <- call_arg(expr, 2) |> diff_expr(x, fl)
   if (rlang::is_null(rhs)) bquote( -.(lhs) )
   else bquote( .(lhs) - .(rhs) )
 }
 
-diff_multiplication <- function(expr, x, fl, const) {
+diff_multiplication <- function(expr, x, fl) {
   # f' g + f g'
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl, const)
-  dg <- diff_expr(g, x, fl, const)
+  df <- diff_expr(f, x, fl)
+  dg <- diff_expr(g, x, fl)
   bquote( .(df)*.(g) + .(f)*.(dg) )
 }
 
-diff_division <- function(expr, x, fl, const) {
+diff_division <- function(expr, x, fl) {
   # (f' g − f g' )/g**2
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl, const)
-  dg <- diff_expr(g, x, fl, const)
+  df <- diff_expr(f, x, fl)
+  dg <- diff_expr(g, x, fl)
   bquote( ( .(df)*.(g) - .(f)*.(dg) ) / .(g)**2 )
 }
 
-diff_exponentiation <- function(expr, x, fl, const) {
+diff_exponentiation <- function(expr, x, fl) {
   # Using the chain rule to handle this generally.
   # if y = f**g then dy/dx = dy/df df/dx = g * f**(g-1) * df/dx
   f <- call_arg(expr, 1)
   g <- call_arg(expr, 2)
-  df <- diff_expr(f, x, fl, const)
+  df <- diff_expr(f, x, fl)
   bquote( .(g) * .(f)**(.(g)-1) * .(df) )
 }
 
-diff_built_in_function_call <- lift(function(expr, x, fl, const) {
+diff_built_in_function_call <- lift(function(expr, x, fl) {
   # chain rule with a known function to differentiate. df/dx = df/dy dy/dx
   name <- call_name(expr)
   keep <- get_keep(fl, name)
   if(keep) {
     warning(paste("Found function", name,  "which should be kept constant. This function is not considered for calculating the derivatives. Notably, also the arguments of the functions are ignored!") )
-    const$const <- TRUE 
     return(0)
   }
   
   name_deriv <- get_derivative_name(fl, name)
   len <- length(expr)
   args <- sapply(seq_along(2:len), function(x) call_arg(expr, x))
-  dy_dx <- sapply(args, function(as) diff_expr(as, x, fl, const) )
+  dy_dx <- sapply(args, function(as) diff_expr(as, x, fl) )
   if(!is.list(args)) args <- as.list(args)
   deriv_args <- formalArgs(get_derivative(fl, name))
   deriv_args <- lapply(deriv_args, str2lang)
@@ -211,8 +205,8 @@ diff_built_in_function_call <- lift(function(expr, x, fl, const) {
   str2lang(entire_deriv)
 })
 
-diff_parens <- function(expr, x, fl, const) {
-  subexpr <- diff_expr(call_arg(expr, 1), x, fl, const)
+diff_parens <- function(expr, x, fl) {
+  subexpr <- diff_expr(call_arg(expr, 1), x, fl)
   if (is.atomic(subexpr) || is.name(subexpr)) subexpr
   else if (is.call(subexpr) && call_name(subexpr) == "(")
     subexpr
@@ -220,19 +214,19 @@ diff_parens <- function(expr, x, fl, const) {
     call("(", subexpr)
 }
 
-diff_call <- lift(function(expr, x, fl, const) {
+diff_call <- lift(function(expr, x, fl) {
   arg1 <- call_arg(expr, 1)
   arg2 <- call_arg(expr, 2)
   call_name(expr) |> purrr::when(
     is.name(.) ~ . |> purrr::when(
-      . == "+" ~ diff_addition(expr, x, fl, const),
-      . == "-" ~ diff_subtraction(expr, x, fl, const),
-      . == "*" ~ diff_multiplication(expr, x, fl, const),
-      . == "/" ~ diff_division(expr, x, fl, const),
-      . == "^" ~ diff_exponentiation(expr, x, fl, const),
-      . == "(" ~ diff_parens(expr, x, fl, const),
-      (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl, const),
-      . == "c" ~ diff_vector_out(expr, x, fl, const),
+      . == "+" ~ diff_addition(expr, x, fl),
+      . == "-" ~ diff_subtraction(expr, x, fl),
+      . == "*" ~ diff_multiplication(expr, x, fl),
+      . == "/" ~ diff_division(expr, x, fl),
+      . == "^" ~ diff_exponentiation(expr, x, fl),
+      . == "(" ~ diff_parens(expr, x, fl),
+      (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl),
+      . == "c" ~ diff_vector_out(expr, x, fl),
       ~ stop(paste("The function", ., "is not supported"))
     ),
     ~ stop(paste("The function", ., "is not supported"))

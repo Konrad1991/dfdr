@@ -46,9 +46,7 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
   fct <- function() {stop("something went wrong")}
   body(fct, envir = environment(fct)) <- codeline
   ret <- lapply(indep_vars, function(inp) {
-    const <- new.env()
-    const$const <- FALSE
-    df <- d(fct, !!inp, fl, const) # const still needed?
+    df <- d(fct, !!inp, fl) 
     cl <- call("=", leftside, codeline)
     if(length(leftside) == 1 && length(inp)) {
       jac_mat <- paste0(jac_mat, "[1, 1]")
