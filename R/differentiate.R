@@ -151,7 +151,7 @@ diff_built_in_function_call <- lift(function(expr, x, fl) {
   name <- call_name(expr)
   keep <- get_keep(fl, name)
   if(keep) {
-    warning(paste("Found function", name,  "which should be kept constant. This function is not considered for calculating the derivatives. Notably, also the arguments of the functions are ignored!") )
+    message(paste("Found function", name,  "which should be kept constant. This function is not considered for calculating the derivatives. Notably, also the arguments of the functions are ignored!") )
     return(0)
   }
   
