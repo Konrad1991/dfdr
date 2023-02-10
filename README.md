@@ -1,7 +1,7 @@
 <!-- badges: start -->
 [![](https://cranlogs.r-pkg.org/badges/last-month/dfdr?color=green)](https://cran.r-project.org/package=dfdr)
 [![](https://www.r-pkg.org/badges/version/dfdr?color=green)](https://cran.r-project.org/package=dfdr)
-[![License: GPL3](https://img.shields.io/badge/license-GPL3-blue.svg)](https://cran.r-project.org/web/licenses/GPL3)
+[![License: GPL3](https://img.shields.io/badge/license-GPL3-blue.svg)](https://cran.r-project.org/web/licenses/GPL-3)
 <!-- badges: end -->
 
 ## News
