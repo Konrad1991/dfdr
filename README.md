@@ -1,5 +1,8 @@
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6e7320d006a94a09b7dd99860bf1defb)](https://www.codacy.com/app/mailund/dfdr?utm_source=github.com&utm_medium=referral&utm_content=mailund/dfdr&utm_campaign=badger)
-[![Travis-CI Build Status](https://travis-ci.org/mailund/dfdr.svg?branch=master)](https://travis-ci.org/mailund/dfdr) [![Coverage Status](https://img.shields.io/codecov/c/github/mailund/dfdr/master.svg)](https://codecov.io/github/mailund/dfdr?branch=master) [![Coverage Status](https://coveralls.io/repos/github/mailund/dfdr/badge.svg?branch=master)](https://coveralls.io/github/mailund/dfdr?branch=master)
+<!-- badges: start -->
+[![](https://cranlogs.r-pkg.org/badges/last-month/dfdr?color=green)](https://cran.r-project.org/package=dfdr)
+[![](https://www.r-pkg.org/badges/version/dfdr?color=green)](https://cran.r-project.org/package=dfdr)
+[![License: GPL3](https://img.shields.io/badge/license-GPL3-blue.svg)](https://cran.r-project.org/web/licenses/GPL3)
+<!-- badges: end -->
 
 ## News
 
