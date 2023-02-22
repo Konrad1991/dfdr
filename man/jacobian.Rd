@@ -2,7 +2,7 @@
 \alias{jacobian}
 \title{jacobian function}
 \usage{
-jacobian(f, y, x, derivs = NULL)
+jacobian(f, y, x, derivs = NULL, num_functions = NULL)
 }
 \arguments{
 \item{f}{A function}
