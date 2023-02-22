@@ -32,14 +32,7 @@ simplify_error <- function(expr) {
   stop(paste0("Unexpected expression ", deparse(expr), " in simplifying"))
 }
 
-#' Simplify an expression by computing the values for constant expressions
-#'
-#' @param expr An expression
-#' @return a simplified expression
-#' @examples 
-#' ex <- quote(a*0 + b^2 + 0)
-#' simplify(ex)
-#' @export
+
 simplify <- function(expr) {
   expr |> purrr::when(
     is_literal(.)     ~ identity(.),

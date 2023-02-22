@@ -1,17 +1,4 @@
-#' Compute the gradient-function of a function.
-#'
-#' Creates a function that computes the derivative of a function with respect to each parameter
-#' and return a vector of these.
-#'
-#' @param f  A function
-#' @param use_names Should the gradient add variable names to the output of the function?
-#' @param ... The variable names for which gradients should be calculated
-#' @return  A function that computes the gradient of f at any point.
-#' @export
-#' @examples 
-#' f <- function(x, y) x^2 + y^2
-#' df <- gradient(f, FALSE, x, y)
-#' df(1, 1)
+
 gradient <- function(f, use_names, ...) {
   args <- rlang::ensyms(...) 
   vars <- purrr::map(args, rlang::as_string)
@@ -30,20 +17,7 @@ gradient <- function(f, use_names, ...) {
     environment(f))
 }
 
-#' Compute the Hessian-function of a function.
-#'
-#' Creates a function that computes the second-order derivatives of a function with respect to each pair of parameters
-#' and return a vector of these.
-#'
-#' @param f  A function
-#' @param use_names Should the gradient add variable names to the output of the function?
-#' @param ... The variable names for which gradients should be calculated
-#' @return  A function that computes the gradient of f at any point.
-#' @examples
-#' f <- function(x, y) x**2 + y**2
-#' h <- hessian(f, FALSE, x, y)
-#' h(0, 0)
-#' @export
+
 hessian <- function(f, use_names = FALSE, ...) {
   args <- rlang::ensyms(...) 
   vars <- purrr::map(args, rlang::as_string)

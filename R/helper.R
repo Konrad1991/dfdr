@@ -53,9 +53,10 @@ diff <- function(leftside, codeline, indep_vars, dep_var, fl, jac_mat) {
     } else if(length(leftside) >= 3 && length(inp) >= 3) {
       fct_index <- leftside[[3]]
       indep_index <- inp[[3]]
-      jac_mat <- paste0(jac_mat, "[", indep_index, ",", fct_index, "]")
+      jac_mat <- paste0(jac_mat, "[", fct_index, ",", indep_index, "]")
     }
     
+    if(body(df) == 0) return(NULL)
     deriv <- call("=", str2lang(jac_mat), simplify_expr(body(df)))
     return(deriv)
   })
@@ -279,10 +280,13 @@ Unfold <- R6::R6Class(
           df <- diff(ls, codeline, self$to_diff, self$y, self$fl, self$jac_mat)
           results[[counter]] <- code[[i]]
           counter <- counter + 1
-          for(j in seq_along(1:length(df))) {
-            results[[counter]] <- df[[j]]
-            counter <- counter + 1
+          if(!is.null(df)) {
+            for(j in seq_along(1:length(df))) {
+              results[[counter]] <- df[[j]]
+              counter <- counter + 1
+            }  
           }
+          
         } else {
           results[[counter]] <- code[[i]]
           counter <- counter + 1
