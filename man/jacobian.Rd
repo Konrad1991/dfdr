@@ -14,7 +14,6 @@ jacobian(f, y, x, derivs = NULL, num_functions = NULL)
 \item{derivs}{optional input defining own functions which should be used. See \code{\link{d}()} for details.}
 
 \item{num_functions}{optional input defining number of functions otherwise a squared matrix form is assumed.}
-
 }
 \value{
 A function that computes the jacobi-matrix of f. Notably, it expects the dame arguments as the input function \emph{f}.
