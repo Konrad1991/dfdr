@@ -1,11 +1,11 @@
 df <- d(sin, x)
-expect_equal(df, cos)
+expect_equal(body(df), quote(cos(x)))
 
 df <- d(cos, x)
 expect_equal(body(df), quote(-sin(x)))
 
 df <- d(exp, x)
-expect_equal(df, exp)
+expect_equal(body(df), quote(exp(x)))
 
 
 f <- function(x) -sin(x)
