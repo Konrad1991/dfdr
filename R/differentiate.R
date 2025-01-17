@@ -120,12 +120,15 @@ diff_variable <- function(var, Tape, Subsetted) {
 
 diff_expr <- lift(function(expr, x, fl, Tape = FALSE, Subsetted = FALSE) {
   if (is.list(Tape)) {
-    expr |> purrr::when(
-      is.numeric(.) ~ quote(0),
-      is.name(.) ~ diff_variable(expr, Tape, Subsetted),
-      is.call(.) ~ diff_call(expr, x, fl, Tape, Subsetted),
-      ~ stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
-    )
+    if (is.numeric(expr)) {
+      quote(0)
+    } else if (is.name(expr)) {
+      diff_variable(expr, Tape, Subsetted)
+    } else if (is.call(expr)) {
+      diff_call(expr, x, fl, Tape, Subsetted)
+    } else {
+      stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
+    }
   } else {
     if (is.call(expr)) {
       if (as.name("[") == expr[[1]]) {
@@ -137,13 +140,17 @@ diff_expr <- lift(function(expr, x, fl, Tape = FALSE, Subsetted = FALSE) {
         }
       }
     }
-    expr |> purrr::when(
-      is.numeric(.) ~ quote(0),
-      is.name(.) && . == x ~ quote(1),
-      is.name(.) ~ quote(0),
-      is.call(.) ~ diff_call(expr, x, fl, Tape, Subsetted),
-      ~ stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
-    )
+    if (is.numeric(expr)) {
+      quote(0)
+    } else if (is.name(expr) && expr == x) {
+      quote(1)
+    } else if (is.name(expr)) {
+      quote(0)
+    } else if (is.call(expr)) {
+      diff_call(expr, x, fl, Tape, Subsetted)
+    } else {
+      stop(paste0("Unexpected expression ", deparse(expr), " in parsing.")) # nocov
+    }
   }
 })
 
@@ -273,35 +280,49 @@ diff_call <- lift(function(expr, x, fl, Tape = FALSE, Subsetted = FALSE) {
   arg1 <- call_arg(expr, 1)
   arg2 <- call_arg(expr, 2)
   if (is.list(Tape)) {
-    call_name(expr) |> purrr::when(
-      is.name(.) ~ . |> purrr::when(
-        . == "+" ~ diff_addition(expr, x, fl, Tape, Subsetted),
-        . == "-" ~ diff_subtraction(expr, x, fl, Tape, Subsetted),
-        . == "*" ~ diff_multiplication(expr, x, fl, Tape, Subsetted),
-        . == "/" ~ diff_division(expr, x, fl, Tape, Subsetted),
-        . == "^" ~ diff_exponentiation(expr, x, fl, Tape, Subsetted),
-        . == "(" ~ diff_parens(expr, x, fl, Tape, Subsetted),
-        . == "[" ~ diff_bracket(expr, x, fl, Tape, Subsetted),
-        (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl, Tape, Subsetted),
-        . == "c" ~ diff_vector_out(expr, x, fl, Tape, Subsetted),
-        ~ stop(paste("The function", ., "is not supported"))
-      ),
-      ~ stop(paste("The function", ., "is not supported"))
-    )
+    e <- call_name(expr)
+    if (is.name(e)) {
+      if (e == "+") {
+        diff_addition(expr, x, fl, Tape, Subsetted)
+      } else if (e == "-") {
+        diff_subtraction(expr, x, fl, Tape, Subsetted)
+      } else if (e == "*") {
+        diff_multiplication(expr, x, fl, Tape, Subsetted)
+      } else if (e == "/") {
+        diff_division(expr, x, fl, Tape, Subsetted)
+      } else if (e == "^") {
+        diff_exponentiation(expr, x, fl, Tape, Subsetted)
+      } else if (e == "(") {
+        diff_parens(expr, x, fl, Tape, Subsetted)
+      } else if (e == "[") {
+        diff_bracket(expr, x, fl, Tape, Subsetted)
+      } else if ((as.character(e) %in% get_names(fl))) {
+        diff_built_in_function_call(expr, x, fl, Tape, Subsetted)
+      } else {
+        stop(paste("The function", expr, "is not supported"))
+      }
+    }
+
   } else {
-    call_name(expr) |> purrr::when(
-      is.name(.) ~ . |> purrr::when(
-        . == "+" ~ diff_addition(expr, x, fl, Tape, Subsetted),
-        . == "-" ~ diff_subtraction(expr, x, fl, Tape, Subsetted),
-        . == "*" ~ diff_multiplication(expr, x, fl, Tape, Subsetted),
-        . == "/" ~ diff_division(expr, x, fl, Tape, Subsetted),
-        . == "^" ~ diff_exponentiation(expr, x, fl, Tape, Subsetted),
-        . == "(" ~ diff_parens(expr, x, fl, Tape, Subsetted),
-        (as.character(.) %in% get_names(fl)) ~ diff_built_in_function_call(expr, x, fl, Tape, Subsetted),
-        . == "c" ~ diff_vector_out(expr, x, fl, Tape, Subsetted),
-        ~ stop(paste("The function", ., "is not supported"))
-      ),
-      ~ stop(paste("The function", ., "is not supported"))
-    )
+    e <- call_name(expr)
+    if (is.name(e)) {
+      if (e == "+") {
+        diff_addition(expr, x, fl, Tape, Subsetted)
+      } else if (e == "-") {
+        diff_subtraction(expr, x, fl, Tape, Subsetted)
+      } else if (e == "*") {
+        diff_multiplication(expr, x, fl, Tape, Subsetted)
+      } else if (e == "/") {
+        diff_division(expr, x, fl, Tape, Subsetted)
+      } else if (e == "^") {
+        diff_exponentiation(expr, x, fl, Tape, Subsetted)
+      } else if (e == "(") {
+        diff_parens(expr, x, fl, Tape, Subsetted)
+      } else if ((as.character(e) %in% get_names(fl))) {
+        diff_built_in_function_call(expr, x, fl, Tape, Subsetted)
+      } else {
+        stop(paste("The function", expr, "is not supported"))
+      }
+    }
   }
 })
