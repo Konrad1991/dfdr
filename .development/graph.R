@@ -1,14 +1,21 @@
-# Adjacent matrix representation of a graph is missing
-# TODO: Graph
-# - Create empty graph
-# - Create adjacent matrix
-# - Add node
-# - add edge
-# - remove edge
-# - Traverse
-#   - Depth-first search
-#   - Breadth-first search
-# - Print
+operations <- list(
+  add = list(
+    forward = function(a, b) a + b,
+    backward = function(grad, inputs) list(grad, grad)
+  ),
+  sub = list(
+    forward = function(a, b) a - b,
+    backward = function(grad, inputs) list(grad, -grad)
+  ),
+  mul = list(
+    forward = function(a, b) a * b,
+    backward = function(grad, inputs) list(grad * inputs[[2]], grad * inputs[[1]])
+  ),
+  div = list(
+    forward = function(a, b) a / b,
+    backward = function(grad, inputs) list(grad / inputs[[2]], -grad * inputs[[1]] / (inputs[[2]]^2))
+  )
+)
 
 setClass(
   "Node",
@@ -17,6 +24,7 @@ setClass(
     connected_nodes = "ANY",
     value = "numeric",
     deriv = "numeric",
+    operation = "character",
     value_call = "function",
     deriv_call = "function"
   )
@@ -42,18 +50,37 @@ dfs <- function(graph, node, visited = character(0)) {
   visited
 }
 
-add_node <- function(graph, node_name, connected_nodes, value, deriv) {
+add_node <- function(graph, node_name, connected_nodes, operation, value) {
   stopifnot(is.character(node_name))
   node <- new("Node",
     name = node_name,
     connected_nodes = connected_nodes,
-    value = as.numeric(value), deriv = as.numeric(deriv)
+    value = as.numeric(value),
+    operation = operation
   )
+  # Generate value_call
+  if (!is.null(operation)) {
+    node@value_call <- function(gr) {
+      inputs <- lapply(node@connected_nodes, function(n) gr[[n]]@value)
+      operations[[operation]]$forward(inputs[[1]], inputs[[2]])
+    }
+  }
+  # Generate deriv_call
+  if (!is.null(operation)) {
+    node@deriv_call <- function(gr) {
+      inputs <- lapply(node@connected_nodes, function(n) gr[[n]])
+      grads <- operations[[operation]]$backward(gr[[node_name]]@deriv, inputs)
+      for (i in seq_along(node@connected_nodes)) {
+        gr[[node@connected_nodes[i]]]@deriv <- gr[[node@connected_nodes[i]]]@deriv + grads[[i]]
+      }
+      gr
+    }
+  }
   graph[[node_name]] <- node
   return(graph)
 }
 
-# Plot
+# Print
 print_graph <- function(graph) {
   for (node in names(graph)) {
     if (is.null(graph[[node]])) {
@@ -68,30 +95,28 @@ print_graph <- function(graph) {
 # b <- x1 + x2
 # y <- a * b
 graph <- create_empty_graph()
-graph <- add_node(graph, "x1", c("a", "b"), 4, 1)
-graph <- add_node(graph, "x2", "b", 2, 1)
-graph <- add_node(graph, "a", "y", NA, 0)
-graph <- add_node(graph, "b", "y", NA, 0)
-graph <- add_node(graph, "y", "END", NA, 0)
+graph <- add_node(graph, "x1", c("a", "b"), "", 4)
+graph <- add_node(graph, "x2", "b", "", 2)
+graph <- add_node(graph, "a", "y", "", NA)
+graph <- add_node(graph, "b", "y", "add", NA)
+graph <- add_node(graph, "y", "END", "mul", NA)
 
 # Forward pass
-graph[["x1"]]@value_call <- function(gr) {
-  return(4)
-}
-graph[["x2"]]@value_call <- function(gr) {
-  return(2)
-}
-graph[["a"]]@value_call <- function(gr) {
-  return(gr[["x1"]]@value)
-}
-graph[["b"]]@value_call <- function(gr) {
-  return(gr[["x1"]]@value + gr[["x2"]]@value)
-}
-graph[["y"]]@value_call <- function(gr) {
-  return(gr[["a"]]@value * gr[["b"]]@value)
-}
-
-print_graph(graph)
+# graph[["x1"]]@value_call <- function(gr) {
+#   return(4)
+# }
+# graph[["x2"]]@value_call <- function(gr) {
+#   return(2)
+# }
+# graph[["a"]]@value_call <- function(gr) {
+#   return(gr[["x1"]]@value)
+# }
+# graph[["b"]]@value_call <- function(gr) {
+#   return(gr[["x1"]]@value + gr[["x2"]]@value)
+# }
+# graph[["y"]]@value_call <- function(gr) {
+#   return(gr[["a"]]@value * gr[["b"]]@value)
+# }
 
 # Perform the forward pass
 compute_values <- function(graph) {
@@ -115,8 +140,7 @@ compute_values <- function(graph) {
     for (node_name in names(graph)) {
       visit(node_name)
     }
-
-    rev(stack) # Reverse the stack for topological order
+    rev(stack)
   }
 
   sorted_nodes <- topological_sort(graph)
@@ -129,76 +153,81 @@ compute_values <- function(graph) {
   return(graph)
 }
 
-graph <- compute_values(graph)
+graph_evaluated <- compute_values(graph)
 # Check computed values
-for (node_name in names(graph)) {
-  cat(node_name, "=", graph[[node_name]]@value, "\n")
+for (node_name in names(graph_evaluated)) {
+  cat(node_name, "=", graph_evaluated[[node_name]]@value, "\n")
 }
-
-# Invert graph
-invert_graph <- function(graph) {
-  inverted_graph <- create_empty_graph()
-  for (node in names(graph)) {
-    for (neighbor in graph[[node]]@connected_nodes) {
-      node_temp <- new("Node",
-        name = neighbor,
-        connected_nodes = graph[[node]]@name,
-        value = graph[[node]]@value, deriv = graph[[node]]@deriv
-      )
-      if (is.null(inverted_graph[[neighbor]])) {
-        inverted_graph[[neighbor]] <- node_temp
-      } else {
-        inverted_graph[[neighbor]]@connected_nodes <- c(
-          inverted_graph[[neighbor]]@connected_nodes,
-          node_temp@connected_nodes
-        )
-      }
-    }
-  }
-  inverted_graph
-}
-
-inverted_graph <- invert_graph(graph)
-print_graph(graph)
-print_graph(inverted_graph)
-str(inverted_graph)
-dfs(inverted_graph, "y")
 
 # Backward pass
-graph[["x1"]]@deriv_call <- function(gr) {
-  return(1)
-}
-graph[["x2"]]@deriv_call <- function(gr) {
-  return(1)
-}
-graph[["a"]]@deriv_call <- function(gr) {
-  return(1)
-}
-graph[["b"]]@deriv_call <- function(gr) {
-  return(gr[["x1"]]@value + gr[["x2"]]@value)
-}
-graph[["y"]]@deriv_call <- function(gr) {
-  return(gr[["a"]]@value * gr[["b"]]@value)
-}
-
-# Find the paths for x1
-# dy/da = 1
+# graph[["y"]]@deriv_call <- function(gr) {
+#   gr[["a"]]@deriv <- gr[["a"]]@deriv + gr[["b"]]@value * gr[["y"]]@deriv
+#   gr[["b"]]@deriv <- gr[["b"]]@deriv + gr[["a"]]@value * gr[["y"]]@deriv
+#   return(gr)
+# }
 #
+# graph[["b"]]@deriv_call <- function(gr) {
+#   gr[["x1"]]@deriv <- gr[["x1"]]@deriv + 1 * gr[["b"]]@deriv
+#   gr[["x2"]]@deriv <- gr[["x2"]]@deriv + 1 * gr[["b"]]@deriv
+#   return(gr)
+# }
+#
+# graph[["a"]]@deriv_call <- function(gr) {
+#   gr[["x1"]]@deriv <- gr[["x1"]]@deriv + 1 * gr[["a"]]@deriv
+#   return(gr)
+# }
 
+compute_derivatives <- function(graph) {
+  graph[["y"]]@deriv <- 1
+  topological_sort <- function(graph) {
+    visited <- character(0L)
+    stack <- character(0L)
+    visit <- function(node_name) {
+      if (node_name %in% visited) {
+        return()
+      }
+      visited <<- c(visited, node_name)
+      if (!is.null(graph[[node_name]])) {
+        for (connected_node in graph[[node_name]]@connected_nodes) {
+          visit(connected_node)
+        }
+      }
+      stack <<- c(stack, node_name)
+    }
+    for (node_name in names(graph)) {
+      visit(node_name)
+    }
 
-dfs_all_paths <- function(graph, node, current_path = character(0L), all_paths = list()) {
-  current_path <- c(current_path, node)
-  if (is.null(graph[[node]]) || length(graph[[node]]@connected_nodes) == 0) {
-    # INFO: Found a leaf --> Node at the end of a path
-    all_paths <- append(all_paths, list(current_path))
-  } else {
-    # Visit all neighbours
-    for (neighbour in graph[[node]]@connected_nodes) {
-      all_paths <- dfs_all_paths(graph, neighbour, current_path, all_paths)
+    stack <- stack[stack != "END"]
+    stack <- stack[stack != "x1"]
+    stack <- stack[stack != "x2"]
+    stack
+  }
+  sorted_nodes <- topological_sort(graph)
+  for (node_name in sorted_nodes) {
+    if (!is.null(graph[[node_name]])) {
+      print(graph[[node_name]])
+      temp <- graph[[node_name]]@deriv_call(graph)
+      graph <- temp
     }
   }
-  return(all_paths)
+  return(graph)
 }
 
-dfs_all_paths(inverted_graph, "y")
-dfs_all_paths(graph, "x1")
+# Compute derivatives
+graph <- compute_values(graph)
+graph_with_derivatives <- compute_derivatives(graph)
+
+# Print results
+for (node_name in names(graph_with_derivatives)) {
+  cat(
+    node_name, ": value =", graph_with_derivatives[[node_name]]@value,
+    ", derivative =", graph_with_derivatives[[node_name]]@deriv, "\n"
+  )
+}
+# Example
+# a <- x1
+# b <- x1 + x2
+# y <- a * b
+# dy/dx1 = x1 * (x1 + x2) = x1^2 + x1*x2 = 10
+# dy/dx2 = x1 = 4

@@ -40,7 +40,6 @@ find_assignment_variables <- function(f) {
     find_vars_in_line(body[[i]], env)
   }
   return(env$variable_list)
-
 }
 
 # INFO: Create the info required during calculation of derivatives
@@ -65,7 +64,7 @@ create_symbol_table <- function(f) {
 # INFO: Construct the full derivative line
 calc_deriv_line <- function(line, x, symbol_table) {
   # INFO: calculate the derivative and retrieve derivatives from Tape
-  # 
+  #
   # J = [
   #   df1/dx1 ... df1/dxn
   #   .            .
@@ -133,6 +132,14 @@ calc_deriv_line <- function(line, x, symbol_table) {
   symbol_table[["IDX"]] <- row_index
   rhs <- calc_deriv_rhs(line, x, symbol_table)
   str2lang(paste0(deparse(lhs), " <- ", rhs))
+}
+
+diff_all <- function(f, x, symbol_table) {
+  b <- body(f)
+  b <- b[b != "{"]
+  # Recursively walk each line
+  # When a <- is found call calc_deriv_line
+  # replace than the call with the original line and the derivative line
 }
 
 diff_test <- function(f, x) {
@@ -203,4 +210,5 @@ jacobian_new <- function(f, y, x, derivs = NULL, num_functions = NULL) {
   # ============================================================================
 
   return(f)
+}
 }
