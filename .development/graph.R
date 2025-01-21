@@ -8,7 +8,19 @@
 # - Traverse
 #   - Depth-first search
 #   - Breadth-first search
-# - Plot
+# - Print
+
+setClass(
+  "Node",
+  slots = c(
+    name = "character",
+    connected_nodes = "ANY",
+    value = "numeric",
+    deriv = "numeric",
+    value_call = "function",
+    deriv_call = "function"
+  )
+)
 
 create_empty_graph <- function() {
   list()
@@ -17,59 +29,37 @@ create_empty_graph <- function() {
 # Traverse the graph
 # Depth-first search
 dfs <- function(graph, node, visited = character(0)) {
+  if (inherits(node, "Node")) {
+    node <- node@name
+  }
   if (node %in% visited) {
     return(visited)
   }
   visited <- c(visited, node)
-  for (neighbor in graph[[node]]) {
+  for (neighbor in names(graph)) {
     visited <- dfs(graph, neighbor, visited)
   }
   visited
 }
 
-# Breadth-first search
-bfs <- function(graph, start) {
-  queue <- c(start)
-  visited <- character(0)
-  while (length(queue) > 0) {
-    node <- queue[1]
-    queue <- queue[-1]
-    if (!(node %in% visited)) {
-      visited <- c(visited, node)
-      queue <- c(queue, graph[[node]])
-    }
-  }
-  visited
-}
-
-add_node <- function(graph, node_name, connected_nodes) {
+add_node <- function(graph, node_name, connected_nodes, value, deriv) {
   stopifnot(is.character(node_name))
-  graph[[node_name]] <- connected_nodes
-  return(graph)
-}
-
-remove_node <- function(graph, node_name, connected_nodes) {
-  stopifnot(is.character(node_name))
-  graph[[node_name]] <- NULL
-  graph <- Filter(Negate(is.null), graph)
-  # TODO: remove the edges to the removed node
-  return(graph)
-}
-
-add_edge <- function(graph, node1, node2) {
-  graph[[node1]] <- c(graph[[node1]], node2)
-  return(graph)
-}
-
-remove_edge <- function(graph, node1, node2) {
-  graph[[node1]] <- setdiff(graph[[node1]], node2)
+  node <- new("Node",
+    name = node_name,
+    connected_nodes = connected_nodes,
+    value = as.numeric(value), deriv = as.numeric(deriv)
+  )
+  graph[[node_name]] <- node
   return(graph)
 }
 
 # Plot
 print_graph <- function(graph) {
   for (node in names(graph)) {
-    cat(node, "->", paste(graph[[node]], collapse = ", "), "\n")
+    if (is.null(graph[[node]])) {
+      next
+    }
+    cat(node, "->", paste(graph[[node]]@connected_nodes, collapse = ", "), "\n")
   }
 }
 
@@ -78,33 +68,132 @@ print_graph <- function(graph) {
 # b <- x1 + x2
 # y <- a * b
 graph <- create_empty_graph()
-graph <- add_node(graph, "x1", c("a", "b"))
-graph <- add_node(graph, "x2", "b")
-graph <- add_node(graph, "a", "y")
-graph <- add_node(graph, "b", "y")
+graph <- add_node(graph, "x1", c("a", "b"), 4, 1)
+graph <- add_node(graph, "x2", "b", 2, 1)
+graph <- add_node(graph, "a", "y", NA, 0)
+graph <- add_node(graph, "b", "y", NA, 0)
+graph <- add_node(graph, "y", "END", NA, 0)
 
+# Forward pass
+graph[["x1"]]@value_call <- function(gr) {
+  return(4)
+}
+graph[["x2"]]@value_call <- function(gr) {
+  return(2)
+}
+graph[["a"]]@value_call <- function(gr) {
+  return(gr[["x1"]]@value)
+}
+graph[["b"]]@value_call <- function(gr) {
+  return(gr[["x1"]]@value + gr[["x2"]]@value)
+}
+graph[["y"]]@value_call <- function(gr) {
+  return(gr[["a"]]@value * gr[["b"]]@value)
+}
+
+print_graph(graph)
+
+# Perform the forward pass
+compute_values <- function(graph) {
+  topological_sort <- function(graph) {
+    visited <- character(0L)
+    stack <- character(0L)
+
+    visit <- function(node_name) {
+      if (node_name %in% visited) {
+        return()
+      }
+      visited <<- c(visited, node_name)
+      if (!is.null(graph[[node_name]])) {
+        for (connected_node in graph[[node_name]]@connected_nodes) {
+          visit(connected_node)
+        }
+      }
+      stack <<- c(stack, node_name)
+    }
+
+    for (node_name in names(graph)) {
+      visit(node_name)
+    }
+
+    rev(stack) # Reverse the stack for topological order
+  }
+
+  sorted_nodes <- topological_sort(graph)
+  # Compute values in topological order
+  for (node_name in sorted_nodes) {
+    if (!is.null(graph[[node_name]])) {
+      graph[[node_name]]@value <- graph[[node_name]]@value_call(graph)
+    }
+  }
+  return(graph)
+}
+
+graph <- compute_values(graph)
+# Check computed values
+for (node_name in names(graph)) {
+  cat(node_name, "=", graph[[node_name]]@value, "\n")
+}
+
+# Invert graph
 invert_graph <- function(graph) {
   inverted_graph <- create_empty_graph()
   for (node in names(graph)) {
-    for (neighbor in graph[[node]]) {
-      inverted_graph[[neighbor]] <- c(inverted_graph[[neighbor]], node)
+    for (neighbor in graph[[node]]@connected_nodes) {
+      node_temp <- new("Node",
+        name = neighbor,
+        connected_nodes = graph[[node]]@name,
+        value = graph[[node]]@value, deriv = graph[[node]]@deriv
+      )
+      if (is.null(inverted_graph[[neighbor]])) {
+        inverted_graph[[neighbor]] <- node_temp
+      } else {
+        inverted_graph[[neighbor]]@connected_nodes <- c(
+          inverted_graph[[neighbor]]@connected_nodes,
+          node_temp@connected_nodes
+        )
+      }
     }
   }
   inverted_graph
 }
 
 inverted_graph <- invert_graph(graph)
+print_graph(graph)
 print_graph(inverted_graph)
+str(inverted_graph)
 dfs(inverted_graph, "y")
+
+# Backward pass
+graph[["x1"]]@deriv_call <- function(gr) {
+  return(1)
+}
+graph[["x2"]]@deriv_call <- function(gr) {
+  return(1)
+}
+graph[["a"]]@deriv_call <- function(gr) {
+  return(1)
+}
+graph[["b"]]@deriv_call <- function(gr) {
+  return(gr[["x1"]]@value + gr[["x2"]]@value)
+}
+graph[["y"]]@deriv_call <- function(gr) {
+  return(gr[["a"]]@value * gr[["b"]]@value)
+}
+
+# Find the paths for x1
+# dy/da = 1
+#
+
 
 dfs_all_paths <- function(graph, node, current_path = character(0L), all_paths = list()) {
   current_path <- c(current_path, node)
-  if (is.null(graph[[node]])) {
+  if (is.null(graph[[node]]) || length(graph[[node]]@connected_nodes) == 0) {
     # INFO: Found a leaf --> Node at the end of a path
     all_paths <- append(all_paths, list(current_path))
   } else {
     # Visit all neighbours
-    for (neighbour in graph[[node]]) {
+    for (neighbour in graph[[node]]@connected_nodes) {
       all_paths <- dfs_all_paths(graph, neighbour, current_path, all_paths)
     }
   }
