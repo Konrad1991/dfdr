@@ -164,3 +164,24 @@ graph <- compute_derivatives(graph)
 
 # Print the graph
 print_graph(graph)
+graph
+# PLAN:
+# - 1. Move to R6
+# - 2. create graph from one line from AST
+#   --> recursivly traverse ast
+#   --> add each function call as node
+#   --> e.g. x * y ==> add_node(graph, "mul1", c("x", "y"), operation = "mul")
+#   --> Increment for each occurance of an operation or variable the counter for this entity
+# - 3. How to create graph across multiple lines?
+#   --> loop over body and add it to the graph
+# - 4. How to handle if
+#   --> store for each path (if, else if etc.) a graph
+#   --> chose the correct path based on the if condition
+# - 5. Can I replace (at least parts)
+#   of the value_call and deriv_call
+#   with symbolic derivatives?
+#   --> Complicated. First understand the current approach better.
+# - 6. What can I calculate during preprocessing?
+#   --> How can I define the graph as string?
+# - 7. How to handle subsetting?
+#   --> Is this basically the same as for if branches?
