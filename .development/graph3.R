@@ -8,37 +8,34 @@
 # 2. How to handle if
 #  - each if branch is stored in a special Node class
 #  - the logical; the branch stored in a graph
-# 3. Add subsetting as binary operator
-# 4. in dfdr export Graph class
+# 5. add Node for constants
+# 6. Subsetted lhs
 operations <- list(
-  # NOTE: l[[1]] is grad, l[[2]] is inputs
   add = list(
-    forward = function(l) l[1] + l[2],
-    backward = function(l) {
-      grad <- l[[1]]
+    forward = function(a, b) {
+      a + b
+    },
+    backward = function(grad, inputs) {
       list(grad, grad)
     }
   ),
   sub = list(
-    forward = function(l) l[1] - l[2],
-    backward = function(l) {
-      grad <- l[[1]]
+    forward = function(a, b) a - b,
+    backward = function(grad, inputs) {
       list(grad, -grad)
     }
   ),
   mul = list(
-    forward = function(l) {
-      l[1] * l[2]
+    forward = function(a, b) {
+      a * b
     },
-    backward = function(l) {
-      inputs <- l[2:3]
-      grad <- l[[1]]
+    backward = function(grad, inputs) {
       list(grad * inputs[[2]]$value, grad * inputs[[1]]$value)
     }
   ),
   div = list(
-    forward = function(l) l[1] / l[2],
-    backward = function(l) {
+    forward = function(a, b) a / b,
+    backward = function(grad, inputs) {
       inputs <- l[2:3]
       grad <- l[[1]]
       list(
@@ -47,11 +44,55 @@ operations <- list(
       )
     }
   ),
+  subsetting = list(
+    forward = function(a, b) {
+      a[b]
+    },
+    backward = function(grad, inputs) {
+      grad_temp <- rep(0, length(inputs[[1]]$value))
+      grad_temp[inputs[[2]]$value] <- grad
+      list(grad_temp, 0)
+    }
+  ),
+  concatenate = list(
+    forward = function(...) {
+      return(unlist(...))
+    },
+    backward = function(grad, inputs) {
+      if (identical(grad, numeric(0))) {
+        return(rep(0, length(inputs)))
+      }
+      res <- rep(grad, length(inputs)) |> as.list()
+      return(res)
+    }
+  ),
   forward = list(
     forward = function(l) l,
-    backward = function(l) list(l[[1]])
+    backward = function(grad, inputs) list(grad)
   )
 )
+
+transf_fct_name <- function(name) {
+  if (name == "+") {
+    return("add")
+  }
+  if (name == "-") {
+    return("sub")
+  }
+  if (name == "*") {
+    return("mul")
+  }
+  if (name == "/") {
+    return("div")
+  }
+  if (name == "[") {
+    return("subsetting")
+  }
+  if (name == "c") {
+    return("concatenate")
+  }
+  name
+}
 
 Node <- R6::R6Class(
   "Node",
@@ -72,10 +113,16 @@ Node <- R6::R6Class(
       self$value_call <- if (!is.null(operation)) {
         function(gr) {
           inputs <- lapply(connected_nodes, function(n) gr[[n]]$value)
-          if (operation == "forward") {
-            return(inputs[[1]])
+          if (operation == "forward" && length(inputs) == 0) {
+            return(value)
+          } else if (operation == "forward" && length(inputs) == 1) {
+            return(operations[[operation]]$forward(inputs[[1]]))
+          } else if (operation == "forward" && length(inputs) == 2) { # TODO: check whether >2 is possible
+            # TODO: what to do???
+          } else if (operation == "concatenate") {
+            return(operations[[operation]]$forward(inputs))
           }
-          operations[[operation]]$forward(c(inputs[[1]], inputs[[2]]))
+          operations[[operation]]$forward(inputs[[1]], inputs[[2]])
         }
       } else {
         NULL
@@ -84,7 +131,7 @@ Node <- R6::R6Class(
         function(gr) {
           inputs <- lapply(connected_nodes, function(n) gr[[n]])
           grads <- operations[[operation]]$backward(
-            c(gr[[name]]$deriv, inputs)
+            gr[[name]]$deriv, inputs
           )
           for (i in seq_along(connected_nodes)) {
             gr[[connected_nodes[i]]]$deriv <-
@@ -150,7 +197,6 @@ Graph <- R6::R6Class(
     },
     forward_pass = function() { # INFO: calculate values
       sorted_nodes <- self$topological_sort() |> rev()
-      sorted_nodes <- sorted_nodes[!sorted_nodes %in% c("x1", "x2")] # TODO: generalize
       for (node_name in sorted_nodes) {
         if (!is.null(self$l[[node_name]]$value_call)) {
           # PLAN: here check if node is "if" branch
@@ -178,6 +224,14 @@ Graph <- R6::R6Class(
 
 is_assign <- function(line) {
   deparse(line[[1]]) %in% c("<-", "=")
+}
+
+is_concatenate <- function(line) {
+  deparse(line[[1]]) == "c"
+}
+
+is_subset <- function(line) {
+  deparse(line[[1]]) == "["
 }
 
 is_call <- function(line) {
@@ -208,22 +262,6 @@ elongate_connected_nodes <- function(env, connected_nodes) {
     )
   }
   connected_nodes
-}
-
-transf_fct_name <- function(name) {
-  if (name == "+") {
-    return("add")
-  }
-  if (name == "-") {
-    return("sub")
-  }
-  if (name == "*") {
-    return("mul")
-  }
-  if (name == "/") {
-    return("div")
-  }
-  name
 }
 
 create_name <- function(line, env) {
@@ -259,6 +297,24 @@ add_binary <- function(line, env) {
   )
 }
 
+add_concatenate <- function(line, env) {
+  fct <- create_name(line, env)
+  connected_nodes <- NULL
+  connected_nodes <- lapply(line[-1], function(x) {
+    if (!is_call(x)) {
+      connected_nodes <- union(connected_nodes, deparse(x))
+    } else {
+      parse_line(x, env)
+      connected_nodes <- elongate_connected_nodes(env, connected_nodes)
+    }
+    return(connected_nodes)
+  })
+  env$graph$add_node(fct,
+    connected_nodes = unlist(connected_nodes),
+    operation = "concatenate"
+  )
+}
+
 parse_line <- function(line, env) {
   if (!is.call(line)) {
     return(line)
@@ -269,17 +325,27 @@ parse_line <- function(line, env) {
       add_forward(line, env)
     } else {
       parse_line(line[[3]], env)
-      prev_node <- env$graph$l[[length(env$graph$l)]]
-      env$graph$add_node(deparse(line[[2]]),
-        connected_nodes = prev_node$name,
+      prev_node1 <- env$graph$l[[length(env$graph$l)]]
+      connected_nodes <- prev_node1$name
+      name <- deparse(line[[2]])
+      if (is_call(line[[2]])) {
+        stopifnot("Only subsetted lhs is allowed" = is_subset(line[[2]]))
+        parse_line(line[[2]], env)
+        prev_node2 <- env$graph$l[[length(env$graph$l)]]
+        connected_nodes <- union(connected_nodes, prev_node2$name)
+        name <- prev_node2$connected_nodes[1] # First what is subsetted then the index
+      }
+      env$graph$add_node(name,
+        connected_nodes = connected_nodes,
         value = NA, operation = "forward"
       ) # TODO: handle subsetted lhs
     }
+  } else if (is_concatenate(line)) {
+    add_concatenate(line, env)
   } else if (length(line) == 3) {
     add_binary(line, env)
   } # TODO: add unary operations
 }
-
 
 # Example: Build the graph
 # y = a * b + a
@@ -287,17 +353,25 @@ parse_line <- function(line, env) {
 # b = x1 + x2
 env <- new.env()
 env$graph <- Graph$new()
-env$counter_list <- list(add = 0, sub = 0, mul = 0, div = 0, forward = 0)
+env$counter_list <- list(
+  add = 0, sub = 0, mul = 0, div = 0, forward = 0,
+  subsetting = 0, concatenate = 0
+)
+parse_line(quote(idx1 <- 3), env)
 parse_line(quote(x1 <- 4), env)
 parse_line(quote(x2 <- 2), env)
-parse_line(quote(a <- x1), env)
+parse_line(quote(x3 <- 3), env)
+parse_line(quote(a <- c(x1, x2, x3)), env)
 parse_line(quote(b <- x1 + x2), env)
-parse_line(quote(y1 <- a * b + a), env)
-parse_line(quote(y2 <- a * b), env)
-
+# parse_line(quote(y <- a * b + a[idx1]), env)
+parse_line(quote(y[idx1] <- a * b + a[idx1]), env)
 graph <- env$graph
-# Compute values and derivatives
 graph$forward_pass()
-graph$backward_pass("y1")
-graph$backward_pass("y2")
+graph$backward_pass("y")
 graph
+
+# y <- c(x1, x2) * (x1 + x2) + c(x1, x2)
+# y1 <- x1 * (x1 + x2) + x1 = x1^2 + x1*x2 + x1
+# dy/dx1 <- 2*x1 + x2 + 1 with x1 = 4 and x2 = 2 --> 11
+# y2 <- x2 * (x1 + x2) + x2 = x2^2 + x1*x2 + x2
+# dy/dx2 <- 2*x2 + x1 + 1 with x1 = 4 and x2 = 2 --> 9
