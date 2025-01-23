@@ -1,10 +1,15 @@
 # PLAN:
+# Code --> GRAPH --> AST_DERIV --> Code_DERIV
+# When parsing GRAPH to AST_DERIV the RHS is assembled to one call
+# This only works in ast2ast. As here each variable holds a
+# value and a derivative. Thus, variables type resembles the
+# Node class in R.
 # 1. Add unary operations
 # 2. How to handle if
-#  --> store for each path (if, else if etc.) a graph
-#  --> chose the correct path based on the if condition
-# 3. How to handle subsetting?
-#  --> Is this basically the same as for if branches?
+#  - each if branch is stored in a special Node class
+#  - the logical; the branch stored in a graph
+# 3. Add subsetting as binary operator
+# 4. in dfdr export Graph class
 operations <- list(
   # NOTE: l[[1]] is grad, l[[2]] is inputs
   add = list(
@@ -90,6 +95,15 @@ Node <- R6::R6Class(
       } else {
         NULL
       }
+    },
+    print = function() {
+      cat(
+        self$name,
+        "->", paste(self$connected_nodes, collapse = ", "), "\n",
+        "Value:", self$value,
+        "Derivative:", self$deriv, "\n",
+        "operation:", self$operation, "\n\n"
+      )
     }
   )
 )
@@ -136,16 +150,17 @@ Graph <- R6::R6Class(
     },
     forward_pass = function() { # INFO: calculate values
       sorted_nodes <- self$topological_sort() |> rev()
-      sorted_nodes <- sorted_nodes[!sorted_nodes %in% c("x1", "x2")]
+      sorted_nodes <- sorted_nodes[!sorted_nodes %in% c("x1", "x2")] # TODO: generalize
       for (node_name in sorted_nodes) {
         if (!is.null(self$l[[node_name]]$value_call)) {
+          # PLAN: here check if node is "if" branch
           self$l[[node_name]]$value <- self$l[[node_name]]$value_call(self$l)
         }
       }
     },
-    backward_pass = function() { # INFO: calculate derivatives
+    backward_pass = function(from_what) { # INFO: calculate derivatives
       sorted_nodes <- self$topological_sort()
-      self$l[["y"]]$deriv <- 1 # Initialize derivative at the output node
+      self$l[[from_what]]$deriv <- 1 # Initialize derivative at the output node
       for (node_name in sorted_nodes) {
         if (!is.null(self$l[[node_name]]$deriv_call)) {
           self$l <- self$l[[node_name]]$deriv_call(self$l)
@@ -154,13 +169,8 @@ Graph <- R6::R6Class(
     },
     print = function() {
       for (node in names(self$l)) {
-        cat(
-          node,
-          "->", paste(self$l[[node]]$connected_nodes, collapse = ", "), "\n",
-          "Value:", self$l[[node]]$value,
-          "Derivative:", self$l[[node]]$deriv, "\n",
-          "operation:", self$l[[node]]$operation, "\n\n"
-        )
+        print(node)
+        self$l[[node]]$print()
       }
     }
   )
@@ -263,11 +273,11 @@ parse_line <- function(line, env) {
       env$graph$add_node(deparse(line[[2]]),
         connected_nodes = prev_node$name,
         value = NA, operation = "forward"
-      )
+      ) # TODO: handle subsetted lhs
     }
-  } else {
+  } else if (length(line) == 3) {
     add_binary(line, env)
-  }
+  } # TODO: add unary operations
 }
 
 
@@ -282,10 +292,12 @@ parse_line(quote(x1 <- 4), env)
 parse_line(quote(x2 <- 2), env)
 parse_line(quote(a <- x1), env)
 parse_line(quote(b <- x1 + x2), env)
-parse_line(quote(y <- a * b + a), env)
+parse_line(quote(y1 <- a * b + a), env)
+parse_line(quote(y2 <- a * b), env)
 
 graph <- env$graph
 # Compute values and derivatives
 graph$forward_pass()
-graph$backward_pass()
+graph$backward_pass("y1")
+graph$backward_pass("y2")
 graph
