@@ -8,8 +8,9 @@
 # 2. How to handle if
 #  - each if branch is stored in a special Node class
 #  - the logical; the branch stored in a graph
-# 5. add Node for constants
-# 6. Subsetted lhs
+# 3. add Node for constants
+# 4. Add possibility that variables occure several times at lhs
+# 5. Subsetted lhs
 operations <- list(
   add = list(
     forward = function(a, b) {
@@ -69,6 +70,10 @@ operations <- list(
   forward = list(
     forward = function(l) l,
     backward = function(grad, inputs) list(grad)
+  ),
+  forward_subsetting = list(
+    forward = function(rhs, what) {
+    }
   )
 )
 
@@ -117,12 +122,14 @@ Node <- R6::R6Class(
             return(value)
           } else if (operation == "forward" && length(inputs) == 1) {
             return(operations[[operation]]$forward(inputs[[1]]))
-          } else if (operation == "forward" && length(inputs) == 2) { # TODO: check whether >2 is possible
-            # TODO: what to do???
           } else if (operation == "concatenate") {
             return(operations[[operation]]$forward(inputs))
+          } else if (operation == "forward_subsetting") {
+            # subset lhs and rhs and then assign
+            return(operations[[operation]]$forward(gr[[name]]$value, inputs))
+          } else {
+            return(operations[[operation]]$forward(inputs[[1]], inputs[[2]]))
           }
-          operations[[operation]]$forward(inputs[[1]], inputs[[2]])
         }
       } else {
         NULL
@@ -238,6 +245,16 @@ is_call <- function(line) {
   is.call(line)
 }
 
+create_name_forward <- function(line, env) {
+  name <- deparse(line[[2]])
+  if (!(name %in% env$variable_list)) {
+    env$variable_list[[name]] <- 0
+  }
+  res <- paste(name, env$variable_list[[name]], sep = "")
+  env$variable_list[[name]] <- env$variable_list[[name]] + 1
+  res
+}
+
 add_forward <- function(line, env) {
   name <- deparse(line[[2]])
   value <- NA
@@ -324,20 +341,24 @@ parse_line <- function(line, env) {
     if (!is_call(line[[3]])) {
       add_forward(line, env)
     } else {
+      operation <- "forward"
       parse_line(line[[3]], env)
       prev_node1 <- env$graph$l[[length(env$graph$l)]]
       connected_nodes <- prev_node1$name
       name <- deparse(line[[2]])
+      # name <- line |> create_name_forward(env)
+
       if (is_call(line[[2]])) {
         stopifnot("Only subsetted lhs is allowed" = is_subset(line[[2]]))
         parse_line(line[[2]], env)
         prev_node2 <- env$graph$l[[length(env$graph$l)]]
         connected_nodes <- union(connected_nodes, prev_node2$name)
         name <- prev_node2$connected_nodes[1] # First what is subsetted then the index
+        operation <- "forward_subsetting"
       }
       env$graph$add_node(name,
         connected_nodes = connected_nodes,
-        value = NA, operation = "forward"
+        value = NA, operation = operation
       ) # TODO: handle subsetted lhs
     }
   } else if (is_concatenate(line)) {
@@ -355,23 +376,22 @@ env <- new.env()
 env$graph <- Graph$new()
 env$counter_list <- list(
   add = 0, sub = 0, mul = 0, div = 0, forward = 0,
-  subsetting = 0, concatenate = 0
+  subsetting = 0, concatenate = 0,
+  forward_subsetting = 0
 )
+env$variable_list <- list()
+
+# parse_line(quote(zero <- 0), env)
 parse_line(quote(idx1 <- 3), env)
+# parse_line(quote(y <- c(zero, zero, zero)), env)
 parse_line(quote(x1 <- 4), env)
 parse_line(quote(x2 <- 2), env)
 parse_line(quote(x3 <- 3), env)
 parse_line(quote(a <- c(x1, x2, x3)), env)
 parse_line(quote(b <- x1 + x2), env)
-# parse_line(quote(y <- a * b + a[idx1]), env)
-parse_line(quote(y[idx1] <- a * b + a[idx1]), env)
+parse_line(quote(y <- a * b + a[idx1]), env)
+# parse_line(quote(y[idx1] <- a * b + a[idx1]), env)
 graph <- env$graph
 graph$forward_pass()
 graph$backward_pass("y")
 graph
-
-# y <- c(x1, x2) * (x1 + x2) + c(x1, x2)
-# y1 <- x1 * (x1 + x2) + x1 = x1^2 + x1*x2 + x1
-# dy/dx1 <- 2*x1 + x2 + 1 with x1 = 4 and x2 = 2 --> 11
-# y2 <- x2 * (x1 + x2) + x2 = x2^2 + x1*x2 + x2
-# dy/dx2 <- 2*x2 + x1 + 1 with x1 = 4 and x2 = 2 --> 9
