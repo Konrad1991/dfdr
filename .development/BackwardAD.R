@@ -17,32 +17,19 @@ source("GraphClass.R")
 source("Parsing.R")
 
 f <- function() {
-  zero <- 0
-  idx1 <- 3
-  y <- c(zero, zero, zero)
-  x1 <- 4
-  x2 <- 2
-  x3 <- 3
-  a <- c(x1, x2, x3)
-  b <- x1 + x2
-  y[idx1] <- a * b + a[idx1]
-  # y <- a * b + a[idx1]
-}
-env <- create_graph(f)
-env$graph$forward_pass()
-env$graph$backward_pass("y_ITER_1")
-env$graph
-
-
-f <- function() {
-  # Expression is: y = (a + b) * b = a*b + b^2
-  # Deriv with respect to a: dy/da = b = 3
-  # Deriv with respect to b: dy/db = a + 2*b = 8
+  # Expression is: y = (a + b) * b + c =
+  # results in a*b + b^2 + c(a, b, a, b) = 2*3 + 3^2 + c(2, 3, 2, 3) =
+  # => c(17, 18, 17, 18)
+  # Deriv with respect to a: dy/da = b + c = b + c(a, b, a, b) = c(4, 3, 4, 3)
+  # Deriv with respect to b: dy/db = a + 2*b + c = c(8, 9, 8, 9)
   a <- 2
   b <- 3
+  c <- c(a, b, a, b)
   a <- a + b
-  y <- a * b
+  y <- a * b + c
+  y
 }
+f()
 env <- create_graph(f)
 env$graph$forward_pass()
 env$graph$backward_pass("y_ITER_0")

@@ -1,7 +1,7 @@
 Graph <- R6::R6Class(
   "Graph",
   public = list(
-    l = list(),
+    l = new.env(),
     visited = NULL,
     stack = NULL,
     initialize = function() {
@@ -9,12 +9,44 @@ Graph <- R6::R6Class(
     },
     add_node = function(node_name, connected_nodes = character(0),
                         operation = NULL, value = NA) {
-      node <- Node$new(
-        name = node_name,
-        connected_nodes = connected_nodes,
-        value = value,
-        operation = operation
-      )
+      node <- NULL
+      if (operation == "add") {
+        node <- NodePlusArithmetic$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      } else if (operation == "sub") {
+        node <- NodeSubArithmetic$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      } else if (operation == "mul") {
+        node <- NodeTimesArithmetic$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      } else if (operation == "div") {
+        node <- NodeDivArithmetic$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      } else if (operation == "forward") {
+        node <- NodeForward$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      } else if (operation == "concatenate") {
+        node <- NodeConcatenate$new(
+          name = node_name,
+          connected_nodes = connected_nodes,
+          value = value
+        )
+      }
       self$l[[node_name]] <- node
     },
     # Topological sort (to process nodes in the correct order)
@@ -41,18 +73,16 @@ Graph <- R6::R6Class(
     forward_pass = function() { # INFO: calculate values
       sorted_nodes <- self$topological_sort() |> rev()
       for (node_name in sorted_nodes) {
-        if (!is.null(self$l[[node_name]]$value_call)) {
-          # PLAN: here check if node is "if" branch
-          self$l[[node_name]]$value <- self$l[[node_name]]$value_call(self$l)
-        }
+        # PLAN: here check if node is "if" branch
+        self$l[[node_name]]$forward(self$l)
       }
     },
     backward_pass = function(from_what) { # INFO: calculate derivatives
       sorted_nodes <- self$topological_sort()
       self$l[[from_what]]$deriv <- 1 # Initialize derivative at the output node
       for (node_name in sorted_nodes) {
-        if (!is.null(self$l[[node_name]]$deriv_call)) {
-          self$l <- self$l[[node_name]]$deriv_call(self$l)
+        if (!is.null(self$l[[node_name]]$backward)) {
+          self$l[[node_name]]$backward(self$l)
         }
       }
     },
