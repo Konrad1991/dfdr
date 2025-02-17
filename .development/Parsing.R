@@ -1,56 +1,12 @@
-transf_fct_name <- function(name) {
-  if (name == "+") {
-    return("add")
-  }
-  if (name == "-") {
-    return("sub")
-  }
-  if (name == "*") {
-    return("mul")
-  }
-  if (name == "/") {
-    return("div")
-  }
-  if (name == "[") {
-    return("subsetting")
-  }
-  if (name == "c") {
-    return("concatenate")
-  }
-  name
-}
-
-is_assign <- function(line) {
-  deparse(line[[1]]) %in% c("<-", "=")
-}
-
-is_concatenate <- function(line) {
-  deparse(line[[1]]) == "c"
-}
-
-is_subset <- function(line) {
-  deparse(line[[1]]) == "["
-}
-
-is_call <- function(line) {
-  is.call(line)
-}
-
-# INFO: test for scalar literals.
-# TRUE: Logical, Integer and double
-is_literal <- function(obj) {
-  is.atomic(obj) && (is.logical(obj) || is.integer(obj) || is.double(obj))
-}
-
-# INFO: Creates name_ITER_IDX
+# INFO: Creates idx_name
 create_name_forward <- function(name, env) {
-  name <- gsub("_ITER_[0-9]+", "", name)
+  name <- gsub("[0-9]_", "", name)
   if (!(name %in% names(env$variable_list))) {
     env$variable_list[[name]] <- 0
   } else {
     env$variable_list[[name]] <- env$variable_list[[name]] + 1
   }
-  res <- paste(name, "_ITER_", env$variable_list[[name]], sep = "")
+  res <- paste(env$variable_list[[name]], "_", name, sep = "")
   res
 }
 
@@ -80,14 +36,14 @@ add_forward_call <- function(line, env) {
 
 # INFO: Foward name <- Constant
 add_forward <- function(line, env) {
-  name <- deparse(line[[2]])
+  name <- deparse(line[[2]]) |> create_name_forward(env)
   value <- NA
   operation <- NULL
   value <- line[[3]]
   operation <- "forward"
   if (rlang::is_symbol(value)) {
     env$graph$add_node(name,
-      connected_nodes = deparse(value),
+      connected_nodes = deparse(value) |> get_names_with_idx(env),
       value = NA, operation = operation
     )
   } else {
@@ -104,6 +60,7 @@ create_literal <- function(value, env) {
   return(name)
 }
 
+# INFO: add the last assigned node to connected nodes
 elongate_connected_nodes <- function(env, connected_nodes) {
   if (length(env$graph$l) >= 1) {
     connected_nodes <- union(
@@ -115,7 +72,7 @@ elongate_connected_nodes <- function(env, connected_nodes) {
 }
 
 # INFO: Get the names with ITER_IDX
-get_names_with_ITER <- function(name, env) {
+get_names_with_idx <- function(name, env) {
   all_names <- names(env$variable_list)
   if (length(env$variable_list) == 0) {
     return(name)
@@ -123,13 +80,14 @@ get_names_with_ITER <- function(name, env) {
   if (!(name %in% all_names)) {
     return(name)
   }
-  paste(name, "_ITER_", env$variable_list[[name]], sep = "")
+  paste(env$variable_list[[name]], "_", name, sep = "")
 }
 
+# INFO: add the counter to the variable name
 create_name <- function(line, env) {
   name <- deparse(line[[1]])
   name <- transf_fct_name(name)
-  res <- paste(name, env$counter_list[[name]], sep = "")
+  res <- paste(env$counter_list[[name]], "_", name, sep = "")
   env$counter_list[[name]] <- env$counter_list[[name]] + 1
   res
 }
@@ -151,7 +109,7 @@ add_binary <- function(line, env) {
   }
   if (!is_call(line[[3]])) {
     if (is.symbol(line[[3]])) {
-      connected_nodes <- union(
+      connected_nodes <- c(
         connected_nodes,
         deparse(line[[3]])
       )
@@ -168,7 +126,7 @@ add_binary <- function(line, env) {
     connected_nodes <- elongate_connected_nodes(env, connected_nodes)
   }
   connected_nodes <- sapply(connected_nodes, function(x) {
-    get_names_with_ITER(x, env)
+    get_names_with_idx(x, env)
   })
   env$graph$add_node(fct,
     connected_nodes = connected_nodes,
@@ -181,12 +139,15 @@ add_concatenate <- function(line, env) {
   connected_nodes <- NULL
   connected_nodes <- lapply(line[-1], function(x) {
     if (!is_call(x)) {
-      connected_nodes <- union(connected_nodes, deparse(x))
+      connected_nodes <- c(connected_nodes, deparse(x))
     } else {
       parse_line(x, env)
       connected_nodes <- elongate_connected_nodes(env, connected_nodes)
     }
     return(connected_nodes)
+  })
+  connected_nodes <- sapply(connected_nodes, function(x) {
+    get_names_with_idx(x, env)
   })
   env$graph$add_node(fct,
     connected_nodes = unlist(connected_nodes),

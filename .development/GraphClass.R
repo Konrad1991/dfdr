@@ -13,10 +13,7 @@ Graph <- R6::R6Class(
                         operation = NULL, value = NA) {
       node <- NULL
       self$last_assigned <- node_name
-      list_assign_name <- paste0(
-        length(self$assignments), "_", node_name
-      )
-      self$assignments[[length(self$assignments) + 1]] <- list_assign_name
+      self$assignments[[length(self$assignments) + 1]] <- node_name
       if (operation == "add") {
         node <- NodePlusArithmetic$new(
           name = node_name,
@@ -86,15 +83,26 @@ Graph <- R6::R6Class(
     },
     backward_pass = function(from_what) { # INFO: calculate derivatives
       sorted_nodes <- self$topological_sort()
-      self$l[[from_what]]$deriv <- 1 # Initialize derivative at the output node
+      # Initialize derivative at the output node
+      set_1_last_assign(from_what, self$l)
       for (node_name in sorted_nodes) {
         if (!is.null(self$l[[node_name]]$backward)) {
           self$l[[node_name]]$backward(self$l)
         }
       }
     },
+    get_value = function(from_what) {
+      idx <- which(grepl(from_what, ls(self$l)))
+      idx <- idx[length(idx)]
+      self$l[[ls(self$l)[idx]]]$value
+    },
+    get_deriv = function(from_what) {
+      idx <- which(grepl(from_what, ls(self$l)))
+      idx <- idx[1]
+      self$l[[ls(self$l)[idx]]]$deriv
+    },
     print = function() {
-      for (node in names(self$l)) {
+      for (node in self$assignments) {
         print(node)
         self$l[[node]]$print()
       }

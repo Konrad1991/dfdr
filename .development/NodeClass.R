@@ -203,25 +203,16 @@ NodeConcatenate <- R6::R6Class(
     },
     backward = function(graph) {
       inputs <- lapply(self$connected_nodes, function(n) graph[[n]])
-      grads <- graph[[self$name]]$backward_intern(
-        self$deriv, inputs
-      )
-      # TODO:Loop over a, b, a, b
-      # But then the grad is added on a and b twice
-      # Therefore, here the entries in a and b have to be elongated
-      # Assumption that grad must have a length which is
-      # a multiple of the length of a and b
-
-      for (i in seq_along(self$connected_nodes)) {
-        graph[[self$connected_nodes[i]]]$deriv <-
-          graph[[self$connected_nodes[i]]]$deriv + grads[[i]]
-      }
-    },
-    backward_intern = function(grad, inputs) {
-      if (identical(grad, numeric(0))) {
-        return(rep(0, length(inputs)))
-      }
-      rep(grad, length(inputs)) |> as.list()
+      grads <- lapply(unique(self$connected_nodes), function(x) {
+        indices <- self$connected_nodes %in% x
+        grad <- rep(0, length(indices))
+        grad[indices] <- graph[[self$name]]$deriv
+        grad
+      })
+      names(grads) <- unique(self$connected_nodes)
+      sapply(unique(self$connected_nodes), function(x) {
+        graph[[x]]$deriv <- graph[[x]]$deriv + grads[[x]]
+      })
     }
   )
 )
