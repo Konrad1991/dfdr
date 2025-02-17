@@ -23,6 +23,19 @@ Node <- R6::R6Class(
   )
 )
 
+NodeLiteral <- R6::R6Class(
+  "NodeLiteral",
+  inherit = Node,
+  public = list(
+    initialize = function(name, connected_nodes, value) {
+      self$name <- name
+      self$connected_nodes <- NULL
+      self$value <- value
+      self$deriv <- 0
+    }
+  )
+)
+
 NodePlusArithmetic <- R6::R6Class(
   "NodePlusArithmetic",
   inherit = Node,

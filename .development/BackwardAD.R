@@ -11,6 +11,7 @@
 # 3. add Node for constants
 # 4. Subsetted lhs
 # setwd("./.development")
+source("Utils.R")
 source("Operations.R")
 source("NodeClass.R")
 source("GraphClass.R")
@@ -24,8 +25,8 @@ f <- function() {
   # Deriv with respect to b: dy/db = a + 2*b + c = c(8, 9, 8, 9)
   a <- 2
   b <- 3
-  c <- c(a, b, a, b)
-  a <- a + b
+  c <- 4 # c(a, b, a, b)
+  a <- a + b + 3
   y <- a * b + c
   y
 }

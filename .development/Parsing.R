@@ -26,7 +26,7 @@ create_name_forward <- function(name, env) {
   res
 }
 
-# INFO: Foraard name <- Call
+# INFO: Forward name <- Call
 add_forward_call <- function(line, env) {
   operation <- "forward"
   parse_line(line[[3]], env)
@@ -65,6 +65,15 @@ add_forward <- function(line, env) {
   } else {
     env$graph$add_node(name, value = value, operation = operation)
   }
+}
+
+# INFO: Create literal entry
+create_literal <- function(value, env) {
+  name <- paste0("LITERAL_", length(env$literal_list) + 1)
+  operation <- "forward"
+  # TODO: add check that LITERAL is not used by user
+  env$graph$add_node(name, value = value, operation = operation)
+  return(name)
 }
 
 elongate_connected_nodes <- function(env, connected_nodes) {
@@ -107,10 +116,17 @@ add_binary <- function(line, env) {
     connected_nodes <- elongate_connected_nodes(env, connected_nodes)
   }
   if (!is_call(line[[3]])) {
-    connected_nodes <- union(
-      connected_nodes,
-      deparse(line[[3]])
-    )
+    if (is.symbol(line[[3]])) {
+      connected_nodes <- union(
+        connected_nodes,
+        deparse(line[[3]])
+      )
+    } else if (is_literal(line[[3]])) {
+      connected_nodes <- union(
+        connected_nodes,
+        create_literal(line[[3]], env)
+      )
+    }
   } else {
     parse_line(line[[3]], env)
     connected_nodes <- elongate_connected_nodes(env, connected_nodes)
@@ -174,6 +190,7 @@ create_graph <- function(fct) {
     forward_subsetting = 0
   )
   env$variable_list <- list()
+  env$literal_list <- list()
   for (i in seq_along(b)) {
     parse_line(b[[i]], env)
   }
