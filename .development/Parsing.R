@@ -1,3 +1,25 @@
+transf_fct_name <- function(name) {
+  if (name == "+") {
+    return("add")
+  }
+  if (name == "-") {
+    return("sub")
+  }
+  if (name == "*") {
+    return("mul")
+  }
+  if (name == "/") {
+    return("div")
+  }
+  if (name == "[") {
+    return("subsetting")
+  }
+  if (name == "c") {
+    return("concatenate")
+  }
+  name
+}
+
 is_assign <- function(line) {
   deparse(line[[1]]) %in% c("<-", "=")
 }
@@ -36,7 +58,7 @@ create_name_forward <- function(name, env) {
 add_forward_call <- function(line, env) {
   operation <- "forward"
   parse_line(line[[3]], env)
-  prev_node1 <- env$graph$l[[length(env$graph$l)]]
+  prev_node1 <- env$graph$l[[env$graph$last_assigned]]
   connected_nodes <- prev_node1$name
   name <- deparse(line[[2]])
   name <- create_name_forward(name, env)
@@ -44,7 +66,7 @@ add_forward_call <- function(line, env) {
     stopifnot("Only subsetted lhs is allowed" = is_subset(line[[2]]))
     env$left_subset <- TRUE
     parse_line(line[[2]], env)
-    prev_node2 <- env$graph$l[[length(env$graph$l)]]
+    prev_node2 <- env$graph$l[[env$graph$last_assigned]]
     connected_nodes <- union(connected_nodes, prev_node2$name)
     name <- prev_node2$connected_nodes[1] |> create_name_forward(env)
     # First what is subsetted then the index
@@ -86,7 +108,7 @@ elongate_connected_nodes <- function(env, connected_nodes) {
   if (length(env$graph$l) >= 1) {
     connected_nodes <- union(
       connected_nodes,
-      env$graph$l[[length(env$graph$l)]]$name
+      env$graph$last_assigned
     )
   }
   connected_nodes

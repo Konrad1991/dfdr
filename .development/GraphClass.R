@@ -4,12 +4,19 @@ Graph <- R6::R6Class(
     l = new.env(),
     visited = NULL,
     stack = NULL,
+    last_assigned = NULL,
+    assignments = list(),
     initialize = function() {
-      self$l <- list()
+      self$l <- new.env()
     },
     add_node = function(node_name, connected_nodes = character(0),
                         operation = NULL, value = NA) {
       node <- NULL
+      self$last_assigned <- node_name
+      list_assign_name <- paste0(
+        length(self$assignments), "_", node_name
+      )
+      self$assignments[[length(self$assignments) + 1]] <- list_assign_name
       if (operation == "add") {
         node <- NodePlusArithmetic$new(
           name = node_name,
