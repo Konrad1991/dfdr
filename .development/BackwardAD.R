@@ -11,7 +11,6 @@
 # 3. add Node for constants
 # 4. Subsetted lhs
 # setwd("./.development")
-source("Utils.R")
 source("Operations.R")
 source("NodeClass.R")
 source("GraphClass.R")
@@ -27,8 +26,10 @@ f <- function() {
   b <- 3
   c <- 4 # c(a, b, a, b)
   a <- a + b + 3
-  y <- a * b + c
+  y <- 1 + a * b + c
   y
+  # dy/da = (a + b + 3) * b = a*b + b^2 + 3*b = b = 3
+  # dy/db = a + 2*b = 2 + 2*3 = 11
 }
 f()
 env <- create_graph(f)

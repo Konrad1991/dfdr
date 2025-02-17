@@ -14,6 +14,12 @@ is_call <- function(line) {
   is.call(line)
 }
 
+# INFO: test for scalar literals.
+# TRUE: Logical, Integer and double
+is_literal <- function(obj) {
+  is.atomic(obj) && (is.logical(obj) || is.integer(obj) || is.double(obj))
+}
+
 # INFO: Creates name_ITER_IDX
 create_name_forward <- function(name, env) {
   name <- gsub("_ITER_[0-9]+", "", name)
@@ -69,9 +75,9 @@ add_forward <- function(line, env) {
 
 # INFO: Create literal entry
 create_literal <- function(value, env) {
-  name <- paste0("LITERAL_", length(env$literal_list) + 1)
+  name <- paste0("LITERAL_", env$literal_counter + 1)
+  env$literal_counter <- env$literal_counter + 1
   operation <- "forward"
-  # TODO: add check that LITERAL is not used by user
   env$graph$add_node(name, value = value, operation = operation)
   return(name)
 }
@@ -110,7 +116,13 @@ add_binary <- function(line, env) {
   fct <- create_name(line, env)
   connected_nodes <- NULL
   if (!is_call(line[[2]])) {
-    connected_nodes <- deparse(line[[2]])
+    if (is.symbol(line[[3]])) {
+      connected_nodes <- deparse(line[[2]])
+    } else if (is_literal(line[[2]])) {
+      connected_nodes <- create_literal(line[[2]], env)
+    } else {
+      stop("For now only literals and symbols are allowed")
+    }
   } else {
     parse_line(line[[2]], env)
     connected_nodes <- elongate_connected_nodes(env, connected_nodes)
@@ -126,6 +138,8 @@ add_binary <- function(line, env) {
         connected_nodes,
         create_literal(line[[3]], env)
       )
+    } else {
+      stop("For now only literals and symbols are allowed")
     }
   } else {
     parse_line(line[[3]], env)
@@ -190,7 +204,7 @@ create_graph <- function(fct) {
     forward_subsetting = 0
   )
   env$variable_list <- list()
-  env$literal_list <- list()
+  env$literal_counter <- 0
   for (i in seq_along(b)) {
     parse_line(b[[i]], env)
   }
