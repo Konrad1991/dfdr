@@ -1,8 +1,22 @@
-setwd("./.development")
+if (!grepl(".development", getwd())) {
+  setwd("./.development")
+}
 source("NodeClass.R")
 source("GraphClass.R")
 source("Parsing.R")
+f <- function() {
+  a <- 2
+  b <- c(a, a)
+  y <- b * b
+  y
+}
+env <- create_graph(f)
+env$graph$forward_pass()
+env$graph$backward_pass("y")
+env$graph
 
+
+# Basic case
 f <- function() {
   a <- 2
   b <- 3
@@ -23,6 +37,7 @@ stopifnot(env$graph$get_deriv("a") == 3)
 stopifnot(env$graph$get_deriv("b") == 8)
 stopifnot(env$graph$get_deriv("c") == 0)
 
+# Test concatenation
 f <- function() {
   a <- 2
   b <- 3

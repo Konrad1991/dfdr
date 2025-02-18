@@ -79,14 +79,14 @@ create_name_fct <- function(line, env) {
 add_forward_call <- function(line, env) {
   operation <- "forward"
   parse_line(line[[3]], env)
-  prev_node1 <- env$graph$l[[env$graph$last_assigned]]
+  prev_node1 <- env$graph$node_list[[env$graph$last_assigned]]
   connected_nodes <- prev_node1$name
   name <- deparse(line[[2]])
   name <- create_name_var(name, env)
   if (is_call(line[[2]])) {
     stopifnot("Only subsetted lhs is allowed" = is_subset(line[[2]]))
     parse_line(line[[2]], env)
-    prev_node2 <- env$graph$l[[env$graph$last_assigned]]
+    prev_node2 <- env$graph$node_list[[env$graph$last_assigned]]
     connected_nodes <- union(connected_nodes, prev_node2$name)
     # TODO: union could be wrong if one subset with itself var[var]
     name <- prev_node2$connected_nodes[1] |> create_name_var(env)
@@ -127,7 +127,7 @@ create_literal <- function(value, env) {
 
 # INFO: add the last assigned node to connected nodes
 elongate_connected_nodes <- function(env, connected_nodes) {
-  if (length(env$graph$l) >= 1) {
+  if (length(env$graph$node_list) >= 1) {
     connected_nodes <- union(
       connected_nodes,
       env$graph$last_assigned
@@ -215,7 +215,7 @@ create_graph <- function(fct) {
     b <- b[-1]
   }
   env <- new.env()
-  env$graph <- Graph$new()
+  env$graph <- graph$new()
   env$function_list <- list(
     add = 0, sub = 0, mul = 0, div = 0, forward = 0,
     subsetting = 0, concatenate = 0,

@@ -1,5 +1,5 @@
-Node <- R6::R6Class(
-  "Node",
+node <- R6::R6Class(
+  "node",
   public = list(
     name = NULL,
     connected_nodes = NULL,
@@ -23,9 +23,9 @@ Node <- R6::R6Class(
   )
 )
 
-NodePlusArithmetic <- R6::R6Class(
-  "NodePlusArithmetic",
-  inherit = Node,
+node_plus <- R6::R6Class(
+  "node_plus",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -54,9 +54,9 @@ NodePlusArithmetic <- R6::R6Class(
   )
 )
 
-NodeSubArithmetic <- R6::R6Class(
-  "NodeSubArithmetic",
-  inherit = Node,
+node_sub <- R6::R6Class(
+  "node_sub",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -85,9 +85,9 @@ NodeSubArithmetic <- R6::R6Class(
   )
 )
 
-NodeTimesArithmetic <- R6::R6Class(
-  "NodeTimesArithmetic",
-  inherit = Node,
+node_times <- R6::R6Class(
+  "node_times",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -116,9 +116,9 @@ NodeTimesArithmetic <- R6::R6Class(
   )
 )
 
-NodeDivArithmetic <- R6::R6Class(
-  "NodeDivArithmetic",
-  inherit = Node,
+node_div <- R6::R6Class(
+  "node_div",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -150,9 +150,9 @@ NodeDivArithmetic <- R6::R6Class(
   )
 )
 
-NodeForward <- R6::R6Class(
-  "NodeForward",
-  inherit = Node,
+node_forward <- R6::R6Class(
+  "node_forward",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -177,7 +177,9 @@ NodeForward <- R6::R6Class(
       )
       for (i in seq_along(self$connected_nodes)) {
         graph[[self$connected_nodes[i]]]$deriv <-
-          graph[[self$connected_nodes[i]]]$deriv + grads[[i]]
+          graph[[self$connected_nodes[i]]]$deriv + grads
+        # NOTE: not grads[[i]].
+        # As this only propagates a subset of the derivative
       }
     },
     backward_intern = function(grad, inputs) {
@@ -186,9 +188,16 @@ NodeForward <- R6::R6Class(
   )
 )
 
-NodeConcatenate <- R6::R6Class(
-  "NodeConcatenate",
-  inherit = Node,
+# TODO: Earlier propagation:
+# It would be better when the derivative of y is
+# the same length as the value attribute
+# NOTE: is grad[indices] <- graph[[self$name]]$deriv
+# still correct?
+# TODO: How to handle literals in c()
+# TODO: How to handle calls in c()
+node_concatenate <- R6::R6Class(
+  "node_concatenate",
+  inherit = node,
   public = list(
     initialize = function(name, connected_nodes, value) {
       super$initialize(
@@ -202,11 +211,6 @@ NodeConcatenate <- R6::R6Class(
       self$value <- unlist(inputs)
     },
     backward = function(graph) {
-      # TODO: Earlier propagation:
-      # It would be better when the derivative of y is
-      # the same length as the value attribute
-      # TODO: How to handle literals in c()
-      # TODO: How to handle calls in c()
       inputs <- lapply(self$connected_nodes, function(n) graph[[n]])
       grads <- lapply(unique(self$connected_nodes), function(x) {
         indices <- self$connected_nodes %in% x
