@@ -4,17 +4,30 @@ if (!grepl(".development", getwd())) {
 source("NodeClass.R")
 source("GraphClass.R")
 source("Parsing.R")
+
+# Concatenation with call
 f <- function() {
   a <- 2
-  b <- c(a, a)
-  y <- b * b
+  b <- 3
+  c <- c(a * a, a + b)
+  y <- c * c
   y
 }
 env <- create_graph(f)
 env$graph$forward_pass()
 env$graph$backward_pass("y")
-env$graph
+# fct is y = [a^2, a + b] * [a^2, a + b] = [a^4, a^2 + b^2 + 2ab]
+# dy/da is [4a^3, 2a + 2b] = [32, 10]
+# dy/db is [0, 2b + 2a] = [0, 10]
+stopifnot(env$graph$get_value("y") == f())
+stopifnot(env$graph$get_deriv("a") == c(32, 10))
+stopifnot(env$graph$get_deriv("b") == c(0, 10))
 
+# Considerung thaat graph can be translated to C++
+sapply(ls(env$graph$node_list), function(x) {
+  env$graph$node_list[[x]] |> class()
+})
+env$graph$sorted_nodes
 
 # Basic case
 f <- function() {
@@ -37,7 +50,7 @@ stopifnot(env$graph$get_deriv("a") == 3)
 stopifnot(env$graph$get_deriv("b") == 8)
 stopifnot(env$graph$get_deriv("c") == 0)
 
-# Test concatenation
+# Basic concatenation
 f <- function() {
   a <- 2
   b <- 3
