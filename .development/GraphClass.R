@@ -1,3 +1,16 @@
+# set deriv to 1 for last assign node
+set_1_last_assign <- function(from_what, node_list) {
+  idx <- which(grepl(from_what, ls(node_list)))
+  idx <- idx[length(idx)]
+  if (length(idx) == 0) {
+    stop("Node not found")
+  } else if (length(idx) == 1) {
+    node_list[[ls(node_list)[idx]]]$deriv <- 1
+  } else {
+    stop("test")
+  }
+}
+
 Graph <- R6::R6Class(
   "Graph",
   public = list(
@@ -91,6 +104,11 @@ Graph <- R6::R6Class(
         }
       }
     },
+    # TODO: Create output class
+    # define a class which holds the nodes
+    # already sorted.
+    # The idea is that the GraphClass is responsible
+    # to create an efficient output
     get_value = function(from_what) {
       idx <- which(grepl(from_what, ls(self$l)))
       idx <- idx[length(idx)]

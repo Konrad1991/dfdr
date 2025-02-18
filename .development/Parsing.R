@@ -1,5 +1,49 @@
+transf_fct_name <- function(name) {
+  if (name == "+") {
+    return("add")
+  }
+  if (name == "-") {
+    return("sub")
+  }
+  if (name == "*") {
+    return("mul")
+  }
+  if (name == "/") {
+    return("div")
+  }
+  if (name == "[") {
+    return("subsetting")
+  }
+  if (name == "c") {
+    return("concatenate")
+  }
+  name
+}
+
+is_assign <- function(line) {
+  deparse(line[[1]]) %in% c("<-", "=")
+}
+
+is_concatenate <- function(line) {
+  deparse(line[[1]]) == "c"
+}
+
+is_subset <- function(line) {
+  deparse(line[[1]]) == "["
+}
+
+is_call <- function(line) {
+  is.call(line)
+}
+
+# INFO: test for scalar literals.
+# TRUE: Logical, Integer and double
+is_literal <- function(obj) {
+  is.atomic(obj) && (is.logical(obj) || is.integer(obj) || is.double(obj))
+}
+
 # INFO: Creates idx_name
-create_name_forward <- function(name, env) {
+create_name_var <- function(name, env) {
   name <- gsub("[0-9]_", "", name)
   if (!(name %in% names(env$variable_list))) {
     env$variable_list[[name]] <- 0
@@ -10,6 +54,27 @@ create_name_forward <- function(name, env) {
   res
 }
 
+# INFO: Get the names with IDX_Name
+get_name <- function(name, env) {
+  all_names <- names(env$variable_list)
+  if (length(env$variable_list) == 0) {
+    return(name)
+  }
+  if (!(name %in% all_names)) {
+    return(name)
+  }
+  paste(env$variable_list[[name]], "_", name, sep = "")
+}
+
+# INFO: add the counter to the function name
+create_name_fct <- function(line, env) {
+  name <- deparse(line[[1]])
+  name <- transf_fct_name(name)
+  res <- paste(env$function_list[[name]], "_", name, sep = "")
+  env$function_list[[name]] <- env$function_list[[name]] + 1
+  res
+}
+
 # INFO: Forward name <- Call
 add_forward_call <- function(line, env) {
   operation <- "forward"
@@ -17,15 +82,15 @@ add_forward_call <- function(line, env) {
   prev_node1 <- env$graph$l[[env$graph$last_assigned]]
   connected_nodes <- prev_node1$name
   name <- deparse(line[[2]])
-  name <- create_name_forward(name, env)
+  name <- create_name_var(name, env)
   if (is_call(line[[2]])) {
     stopifnot("Only subsetted lhs is allowed" = is_subset(line[[2]]))
-    env$left_subset <- TRUE
     parse_line(line[[2]], env)
     prev_node2 <- env$graph$l[[env$graph$last_assigned]]
     connected_nodes <- union(connected_nodes, prev_node2$name)
-    name <- prev_node2$connected_nodes[1] |> create_name_forward(env)
-    # First what is subsetted then the index
+    # TODO: union could be wrong if one subset with itself var[var]
+    name <- prev_node2$connected_nodes[1] |> create_name_var(env)
+    # NOTE: First what is subsetted then the index
     operation <- "forward_subsetting"
   }
   env$graph$add_node(name,
@@ -34,16 +99,16 @@ add_forward_call <- function(line, env) {
   )
 }
 
-# INFO: Foward name <- Constant
+# INFO: Foward name <- Constant/variable
 add_forward <- function(line, env) {
-  name <- deparse(line[[2]]) |> create_name_forward(env)
+  name <- deparse(line[[2]]) |> create_name_var(env)
   value <- NA
   operation <- NULL
   value <- line[[3]]
   operation <- "forward"
   if (rlang::is_symbol(value)) {
     env$graph$add_node(name,
-      connected_nodes = deparse(value) |> get_names_with_idx(env),
+      connected_nodes = deparse(value) |> get_name(env),
       value = NA, operation = operation
     )
   } else {
@@ -71,62 +136,32 @@ elongate_connected_nodes <- function(env, connected_nodes) {
   connected_nodes
 }
 
-# INFO: Get the names with ITER_IDX
-get_names_with_idx <- function(name, env) {
-  all_names <- names(env$variable_list)
-  if (length(env$variable_list) == 0) {
-    return(name)
+handle_expr <- function(expr, env) {
+  connected_nodes <- NULL
+  if (!is_call(expr)) {
+    if (is.symbol(expr)) {
+      connected_nodes <- deparse(expr)
+    } else if (is_literal(expr)) {
+      connected_nodes <- create_literal(expr, env)
+    } else {
+      stop("For now only literals and symbols are allowed")
+    }
+  } else {
+    parse_line(expr, env)
+    connected_nodes <- elongate_connected_nodes(env, connected_nodes)
   }
-  if (!(name %in% all_names)) {
-    return(name)
-  }
-  paste(env$variable_list[[name]], "_", name, sep = "")
-}
-
-# INFO: add the counter to the variable name
-create_name <- function(line, env) {
-  name <- deparse(line[[1]])
-  name <- transf_fct_name(name)
-  res <- paste(env$counter_list[[name]], "_", name, sep = "")
-  env$counter_list[[name]] <- env$counter_list[[name]] + 1
-  res
+  return(connected_nodes)
 }
 
 add_binary <- function(line, env) {
-  fct <- create_name(line, env)
-  connected_nodes <- NULL
-  if (!is_call(line[[2]])) {
-    if (is.symbol(line[[3]])) {
-      connected_nodes <- deparse(line[[2]])
-    } else if (is_literal(line[[2]])) {
-      connected_nodes <- create_literal(line[[2]], env)
-    } else {
-      stop("For now only literals and symbols are allowed")
-    }
-  } else {
-    parse_line(line[[2]], env)
-    connected_nodes <- elongate_connected_nodes(env, connected_nodes)
-  }
-  if (!is_call(line[[3]])) {
-    if (is.symbol(line[[3]])) {
-      connected_nodes <- c(
-        connected_nodes,
-        deparse(line[[3]])
-      )
-    } else if (is_literal(line[[3]])) {
-      connected_nodes <- union(
-        connected_nodes,
-        create_literal(line[[3]], env)
-      )
-    } else {
-      stop("For now only literals and symbols are allowed")
-    }
-  } else {
-    parse_line(line[[3]], env)
-    connected_nodes <- elongate_connected_nodes(env, connected_nodes)
-  }
+  fct <- create_name_fct(line, env)
+  connected_nodes <- handle_expr(line[[2]], env)
+  connected_nodes <- c(
+    connected_nodes,
+    handle_expr(line[[3]], env)
+  )
   connected_nodes <- sapply(connected_nodes, function(x) {
-    get_names_with_idx(x, env)
+    get_name(x, env)
   })
   env$graph$add_node(fct,
     connected_nodes = connected_nodes,
@@ -135,7 +170,7 @@ add_binary <- function(line, env) {
 }
 
 add_concatenate <- function(line, env) {
-  fct <- create_name(line, env)
+  fct <- create_name_fct(line, env)
   connected_nodes <- NULL
   connected_nodes <- lapply(line[-1], function(x) {
     if (!is_call(x)) {
@@ -147,7 +182,7 @@ add_concatenate <- function(line, env) {
     return(connected_nodes)
   })
   connected_nodes <- sapply(connected_nodes, function(x) {
-    get_names_with_idx(x, env)
+    get_name(x, env)
   })
   env$graph$add_node(fct,
     connected_nodes = unlist(connected_nodes),
@@ -181,7 +216,7 @@ create_graph <- function(fct) {
   }
   env <- new.env()
   env$graph <- Graph$new()
-  env$counter_list <- list(
+  env$function_list <- list(
     add = 0, sub = 0, mul = 0, div = 0, forward = 0,
     subsetting = 0, concatenate = 0,
     forward_subsetting = 0

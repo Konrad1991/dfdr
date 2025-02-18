@@ -202,6 +202,11 @@ NodeConcatenate <- R6::R6Class(
       self$value <- unlist(inputs)
     },
     backward = function(graph) {
+      # TODO: Earlier propagation:
+      # It would be better when the derivative of y is
+      # the same length as the value attribute
+      # TODO: How to handle literals in c()
+      # TODO: How to handle calls in c()
       inputs <- lapply(self$connected_nodes, function(n) graph[[n]])
       grads <- lapply(unique(self$connected_nodes), function(x) {
         indices <- self$connected_nodes %in% x
